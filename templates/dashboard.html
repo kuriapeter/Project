@@ -1,70 +1,265 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Dashboard</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
+{% extends "base.html" %}
 
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
+{% block title %}Dashboard - Finance Tracker{% endblock %}
 
-        p {
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 300px;
-            text-align: center;
-            margin: 10px 0;
-            font-size: 18px;
-            color: #555;
-        }
+{% block content %}
 
-        a {
-            display: inline-block;
-            margin: 10px;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.3s ease;
-        }
+<h2>📊 KPI & Performance Indicators</h2>
+<canvas id="kpiChart"></canvas>
 
-        a:hover {
-            background-color: #0056b3;
-        }
+<h2>🔔 Alerts & Reminders</h2>
+<ul id="alertsList">Loading alerts...</ul>
 
-        .links-container {
-            margin-top: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+
+
+<style>
+    h1 {
+        color: #333;
+        margin-bottom: 20px;
+    }
+
+    .dashboard-stats {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 20px;
+        padding: 20px;
+        background: #fff;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat {
+        font-size: 1.5em;
+        margin: 10px 0;
+        color: #555;
+    }
+
+    .stat-label {
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    .dashboard-kpis {
+        margin-top: 30px;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    .kpi-box {
+        display: inline-block;
+        margin: 15px;
+        padding: 15px;
+        background: #fff;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        function fetchFinancialData() {
+            fetch('/api/financial_data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("totalIncome").innerText = data.total_income;
+                    document.getElementById("totalExpenses").innerText = data.total_expense;
+                    document.getElementById("netProfit").innerText = data.net_profit;
+                })
+                .catch(error => console.error("Error fetching data:", error));
         }
-    </style>
-</head>
-<body>
-    <h1>Dashboard</h1>
-    <p>Total Income: (not displayed)</p>
-    <p>Total Expense: (not displayed)</p>
-    <p>Net Balance: (not displayed)</p>
     
-    <div class="links-container">
-        <a href="{{ url_for('auth.add_income') }}">Add Income</a>
-        <a href="{{ url_for('auth.add_expense') }}">Add Expense</a>
-        <a href="{{ url_for('auth.view_records') }}">View Income and Expense Records</a>
+        // Refresh data every 5 seconds
+        setInterval(fetchFinancialData, 5000);
+    });
+    </script>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let kpiChart; // Store the KPI Chart instance
+    
+        function fetchKPIData() {
+            fetch('/api/kpi_data')
+                .then(response => response.json())
+                .then(data => {
+                    updateKPIChart(data);
+                })
+                .catch(error => console.error("Error fetching KPI data:", error));
+        }
+    
+        function fetchAlerts() {
+            fetch('/api/alerts')
+                .then(response => response.json())
+                .then(alerts => {
+                    let alertList = document.getElementById("alertsList");
+                    alertList.innerHTML = alerts.length ? alerts.map(alert => `<li>${alert}</li>`).join("") : "<li>No alerts</li>";
+                })
+                .catch(error => console.error("Error fetching alerts:", error));
+        }
+    
+        function updateKPIChart(data) {
+            if (kpiChart) {
+                kpiChart.data.datasets[0].data = [data.profit_margin, data.expense_ratio, data.cash_flow];
+                kpiChart.update();
+            } else {
+                let ctx = document.getElementById("kpiChart").getContext("2d");
+                kpiChart = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: ["Profit Margin (%)", "Expense-to-Income Ratio (%)", "Cash Flow"],
+                        datasets: [{
+                            label: "KPI Metrics",
+                            data: [data.profit_margin, data.expense_ratio, data.cash_flow],
+                            backgroundColor: ["#4CAF50", "#FF5733", "#3498DB"]
+                        }]
+                    }
+                });
+            }
+        }
+    
+        // Fetch data every 5 seconds
+        fetchKPIData();
+        fetchAlerts();
+        setInterval(fetchKPIData, 5000);
+        setInterval(fetchAlerts, 5000);
+    });
+    </script>
+    
+    <div class="payroll-overview">
+        <h3>Payroll Overview</h3>
+        <p><strong>Total Payroll Expenses:</strong> <span id="totalPayroll"></span></p>
+    
+        <h4>Upcoming Payroll</h4>
+        <ul id="upcomingPayroll"></ul>
+    
+        <h4>Discrepancies</h4>
+        <ul id="payrollDiscrepancies"></ul>
     </div>
-</body>
-</html>
+    
+    <script>
+        async function loadPayrollData() {
+            const totalPayrollRes = await fetch('/payroll/total');
+            const totalPayroll = await totalPayrollRes.json();
+            document.getElementById('totalPayroll').innerText = `$${totalPayroll.total_payroll}`;
+    
+            const upcomingPayrollRes = await fetch('/payroll/upcoming');
+            const upcomingPayroll = await upcomingPayrollRes.json();
+            document.getElementById('upcomingPayroll').innerHTML = upcomingPayroll.upcoming_payroll.map(p => 
+                `<li>Employee ${p.employee_id}: $${p.salary_amount} on ${p.pay_date}</li>`
+            ).join('');
+    
+            const discrepanciesRes = await fetch('/payroll/discrepancies');
+            const discrepancies = await discrepanciesRes.json();
+            document.getElementById('payrollDiscrepancies').innerHTML = discrepancies.discrepancies.length > 0 
+                ? discrepancies.discrepancies.map(d => `<li>Employee ${d.id} (${d.name}) has missing payments</li>`).join('')
+                : '<li>No discrepancies detected.</li>';
+        }
+    
+        loadPayrollData();
+    </script>
+    
+
+
+
+
+
+    <h2>Welcome to Your Finance Dashboard</h2>
+
+    <p>Total Income: <span id="totalIncome">Loading...</span></p>
+    <p>Total Expenses: <span id="totalExpenses">Loading...</span></p>
+    <p>Net Profit: <span id="netProfit">Loading...</span></p>
+    
+
+<script>
+    fetch('/api/kpi_data')
+        .then(response => response.json())
+        .then(data => {
+            console.log("KPI Data:", data); // Debugging
+    
+            if (!data.yearly_performance || data.yearly_performance.length === 0) {
+                console.warn("No chart data available.");
+                return;
+            }
+    
+            const ctx = document.getElementById('yearlyChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.yearly_performance.map(item => item.month),
+                    datasets: [
+                        {
+                            label: 'Total Income',
+                            data: data.yearly_performance.map(item => item.total_income),
+                            backgroundColor: 'green'
+                        },
+                        {
+                            label: 'Total Expenses',
+                            data: data.yearly_performance.map(item => item.total_expenses),
+                            backgroundColor: 'red'
+                        }
+                    ]
+                }
+            });
+        })
+        .catch(error => console.error('Error fetching KPI data:', error));
+    </script>
+    
+<div class="dashboard-alerts">
+    <h3>🔔 Alerts & Reminders</h3>
+    <ul id="alerts-list">
+        <li>Loading alerts...</li>
+    </ul>
+</div>
+
+<style>
+    .dashboard-alerts {
+        margin-top: 30px;
+        padding: 20px;
+        background: #ffeeba;
+        border-left: 5px solid #ff9800;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .dashboard-alerts ul {
+        list-style-type: none;
+        padding: 0;
+    }
+    .dashboard-alerts li {
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+        font-size: 1em;
+    }
+</style>
+<script>
+    fetch('/api/alerts')
+        .then(response => response.json())
+        .then(data => {
+            const alertsList = document.getElementById("alerts-list");
+            alertsList.innerHTML = "";
+    
+            if (data.length === 0) {
+                alertsList.innerHTML = "<li>✅ No alerts at the moment.</li>";
+            } else {
+                data.forEach(alert => {
+                    let alertItem = document.createElement("li");
+                    alertItem.textContent = alert.message;
+                    alertsList.appendChild(alertItem);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching alerts:', error);
+        });
+    </script>
+    
+
+
+{% endblock %}

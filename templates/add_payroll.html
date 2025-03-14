@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Payroll{% endblock %}
+
+{% block content %}
+    <h2>Add Payroll Entry</h2>
+    <form action="{{ url_for('add_payroll') }}" method="POST">
+    <input type="text" name="employee_id" placeholder="Employee ID" required>
+    <input type="number" name="salary_amount" placeholder="Salary Amount" required>
+    <input type="date" name="pay_date" required>
+    <select name="status">
+        <option value="pending">Pending</option>
+        <option value="paid">Paid</option>
+    </select>
+    <textarea name="notes" placeholder="Notes"></textarea>
+    <button type="submit">Add Payroll</button>
+</form>
+
+    
+    
+    
+    
+{% endblock %}

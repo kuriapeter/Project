@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Finance Tracker{% endblock %}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #007bff;
+            color: white;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding-top: 20px;
+            transition: width 0.3s;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: 60px;
+        }
+
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar ul li {
+            padding: 15px;
+            text-align: left;
+        }
+
+        .sidebar ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            display: block;
+        }
+
+        .sidebar ul li a:hover {
+            text-decoration: underline;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 10px;
+            position: absolute;
+            right: -40px;
+            top: 10px;
+            background-color: #0056b3;
+            border-radius: 5px;
+        }
+
+        .content {
+            margin-left: 250px;
+            padding: 20px;
+            max-width: 800px;
+            margin-top: 20px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: margin-left 0.3s;
+        }
+
+        .content.expanded {
+            margin-left: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+        <ul>
+            <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('view_transactions') }}">Transactions</a></li>
+            <li><a href="{{ url_for('charts_page') }}">Charts</a></li>
+            <li><a href="{{ url_for('budgets') }}">Budgets</a></li>
+            <li><a href="{{ url_for('reports_page') }}">Reports</a></li>
+            <li><a href="{{ url_for('add_income') }}">Add Income</a></li>
+            <li><a href="{{ url_for('add_expense') }}">Add Expense</a></li>
+            <!-- Payroll Section -->
+            <li><a href="{{ url_for('add_payroll') }}">Add Payroll</a></li>
+            <li><a href="{{ url_for('payroll_overview') }}">Payroll Overview</a></li>
+
+            
+            <li><a href="{{ url_for('settings') }}">Settings</a></li>
+        </ul>
+    </div>
+    
+    <div class="content" id="main-content">
+        {% block content %}{% endblock %}
+    </div>
+    <h2>Export Financial Reports</h2>
+
+    <form action="#" method="post">
+        <label>Select Timeframe:</label>
+        <select id="timeframe">
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+        </select>
+
+        <h3>Export as:</h3>
+        <button type="button" onclick="exportReport('csv')">Download CSV</button>
+        <button type="button" onclick="exportReport('excel')">Download Excel</button>
+        <button type="button" onclick="exportReport('pdf')">Download PDF</button>
+    </form>
+
+    <script>
+        function exportReport(format) {
+            var timeframe = document.getElementById("timeframe").value;
+            window.location.href = "/export/" + format + "/" + timeframe;
+        }
+
+        function toggleSidebar() {
+            let sidebar = document.getElementById("sidebar");
+            let content = document.getElementById("main-content");
+            sidebar.classList.toggle("collapsed");
+            content.classList.toggle("expanded");
+        }
+    </script>
+</body>
+</html>

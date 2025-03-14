@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+        margin-top: 20px;
+        color: #333;
+    }
+
+    .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+
+    .alert-info {
+        background-color: #d9edf7;
+        color: #31708f;
+    }
+
+    .alert-danger {
+        background-color: #f2dede;
+        color: #a94442;
+    }
+
+    h4 {
+        margin-top: 20px;
+        color: #555;
+    }
+
+    ul {
+        padding-left: 20px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    th, td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    th {
+        background-color: #f2f2f2;
+    }
+
+    tr:hover {
+        background-color: #f5f5f5;
+    }
+
+    .update-btn {
+        background-color: #1a73e8;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+
+    .update-btn:hover {
+        background-color: #1558b0;
+    }
+</style>
+
+<div class="container">
+    <h2 class="mt-4">Payroll Overview</h2>
+
+    <!-- Total Payroll Expenses -->
+    <div class="alert alert-info">
+        <h3>Total Payroll: <span id="payroll-value" class="currency">KES {{ total_payroll }}</span></h3>
+        <button class="update-btn" onclick="updatePayroll()">Update Payroll</button>
+    </div>
+
+    <!-- Upcoming Payroll Dates -->
+    <h4>Upcoming Payroll Dates</h4>
+    <ul>
+        {% for payroll in upcoming_payroll %}
+            <li>{{ payroll.pay_date }}</li>
+        {% endfor %}
+    </ul>
+
+    <!-- Payroll Discrepancies -->
+    {% if discrepancies %}
+        <div class="alert alert-danger">
+            <h4>Payroll Discrepancies Found!</h4>
+            <ul>
+                {% for issue in discrepancies %}
+                    <li>Employee ID {{ issue.employee_id }} has an invalid salary: KES {{ issue.salary_amount }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <!-- Employee Payroll List -->
+    <h4>Payroll List</h4>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Employee Name</th>
+                <th>Salary Amount</th>
+                <th>Pay Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payroll in payroll_records %}
+                <tr>
+                    <td>{{ payroll.employee_name }}</td>
+                    <td>KES {{ payroll.salary_amount }}</td> 
+                    <td>{{ payroll.pay_date }}</td>
+                    <td>{{ payroll.status }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function animatePayroll(value) {
+        let element = document.getElementById("payroll-value");
+        let start = 0;
+        let end = parseInt(value.replace(/,/g, "")); // Remove commas before converting
+        let duration = 2000; // 2 seconds animation
+
+        let step = Math.ceil(end / (duration / 10));
+        let counter = setInterval(() => {
+            start += step;
+            if (start >= end) {
+                clearInterval(counter);
+                start = end;
+            }
+            element.textContent = "KES " + start.toLocaleString() + ".00";
+        }, 10);
+    }
+
+    function updatePayroll() {
+        fetch("/payroll/total")  // Ensure this endpoint returns a JSON response like {"total_payroll": "KES 350,110.00"}
+            .then(response => response.json())
+            .then(data => {
+                let fetchedPayroll = data.total_payroll.replace("KES ", ""); // Remove currency symbol
+                animatePayroll(fetchedPayroll);
+            })
+            .catch(error => console.error("Error fetching payroll:", error));
+    }
+</script>
+
+{% endblock %}
