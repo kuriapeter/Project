@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}{{ error_title }} - Company Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-box">
+        <h1>{{ error_title }}</h1>
+        <p class="error-message">{{ error_message }}</p>
+        {% if error_code %}
+        <div class="error-code">Error {{ error_code }}</div>
+        {% endif %}
+        <div class="error-actions">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+            <a href="{{ url_for('login') }}" class="btn btn-secondary">Login Again</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

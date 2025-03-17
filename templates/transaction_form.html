@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if transaction else 'Add' }} Transaction - Company Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="transaction-form-container">
+    <div class="page-header">
+        <h1>{{ 'Edit' if transaction else 'Add' }} Transaction</h1>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="transaction-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="form-group">
+            <label for="type">Type *</label>
+            <select name="type" id="type" class="form-control" required>
+                <option value="income" {% if transaction and transaction.type == 'income' %}selected{% endif %}>Income</option>
+                <option value="expense" {% if transaction and transaction.type == 'expense' %}selected{% endif %}>Expense</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="amount">Amount *</label>
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">KSh</span>
+                </div>
+                <input type="number" step="0.01" min="0" name="amount" id="amount" class="form-control" 
+                       value="{{ transaction.amount if transaction else '' }}" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="category">Category *</label>
+            <select name="category" id="category" class="form-control" required>
+                {% for budget in budgets %}
+                <option value="{{ budget.category }}" {% if transaction and transaction.category == budget.category %}selected{% endif %}>
+                    {{ budget.category }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea name="description" id="description" class="form-control" rows="3">{{ transaction.description if transaction else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="date">Date *</label>
+            <input type="date" name="date" id="date" class="form-control" 
+                   value="{{ transaction.date.strftime('%Y-%m-%d') if transaction else '' }}" required>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ 'Update' if transaction else 'Add' }} Transaction</button>
+            <a href="{{ url_for('view_transactions') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.transaction-form-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.transaction-form {
+    margin-top: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-actions {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}

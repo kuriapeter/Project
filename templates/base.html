@@ -3,136 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Finance Tracker{% endblock %}</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-            display: flex;
-        }
-
-        .sidebar {
-            width: 250px;
-            background: #007bff;
-            color: white;
-            height: 100vh;
-            position: fixed;
-            left: 0;
-            top: 0;
-            padding-top: 20px;
-            transition: width 0.3s;
-            overflow: hidden;
-        }
-
-        .sidebar.collapsed {
-            width: 60px;
-        }
-
-        .sidebar ul {
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .sidebar ul li {
-            padding: 15px;
-            text-align: left;
-        }
-
-        .sidebar ul li a {
-            color: white;
-            text-decoration: none;
-            font-weight: bold;
-            display: block;
-        }
-
-        .sidebar ul li a:hover {
-            text-decoration: underline;
-        }
-
-        .toggle-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            padding: 10px;
-            position: absolute;
-            right: -40px;
-            top: 10px;
-            background-color: #0056b3;
-            border-radius: 5px;
-        }
-
-        .content {
-            margin-left: 250px;
-            padding: 20px;
-            max-width: 800px;
-            margin-top: 20px;
-            background: white;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            transition: margin-left 0.3s;
-        }
-
-        .content.expanded {
-            margin-left: 60px;
-        }
-    </style>
+    <title>{% block title %}Company Finance Tracker{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <div class="sidebar" id="sidebar">
-        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
-        <ul>
-            <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
-            <li><a href="{{ url_for('view_transactions') }}">Transactions</a></li>
-            <li><a href="{{ url_for('charts_page') }}">Charts</a></li>
-            <li><a href="{{ url_for('budgets') }}">Budgets</a></li>
-            <li><a href="{{ url_for('reports_page') }}">Reports</a></li>
-            <li><a href="{{ url_for('add_income') }}">Add Income</a></li>
-            <li><a href="{{ url_for('add_expense') }}">Add Expense</a></li>
-            <!-- Payroll Section -->
-            <li><a href="{{ url_for('add_payroll') }}">Add Payroll</a></li>
-            <li><a href="{{ url_for('payroll_overview') }}">Payroll Overview</a></li>
+    <!-- Mobile Navigation Toggle -->
+    <button class="mobile-menu-toggle d-md-none btn btn-link position-fixed" style="top: 1rem; right: 1rem; z-index: 1001;">
+        <i class="fas fa-bars fa-lg"></i>
+    </button>
 
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('auth.dashboard') }}">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="me-2" style="height: 30px;">
+                <span class="fw-bold">Finance Tracker</span>
+            </a>
             
-            <li><a href="{{ url_for('settings') }}">Settings</a></li>
-        </ul>
+            <div class="d-flex align-items-center">
+                <!-- Notifications -->
+                <div class="dropdown me-3">
+                    <button class="btn btn-link position-relative" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-bell fa-lg text-muted"></i>
+                        <span class="notification-count position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            0
+                        </span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end" style="width: 300px;">
+                        <h6 class="dropdown-header">Notifications</h6>
+                        <div class="notifications-container">
+                            <!-- Notifications will be dynamically inserted here -->
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item text-center" href="{{ url_for('auth.notifications') }}">View All</a>
+                    </div>
+                </div>
+                
+                <!-- User Menu -->
+                <div class="dropdown">
+                    <button class="btn btn-link d-flex align-items-center text-decoration-none" type="button" data-bs-toggle="dropdown">
+                        <div class="me-2 text-end">
+                            <div class="fw-bold text-dark">{{ current_user.username }}</div>
+                            <small class="text-muted">{{ current_user.role|title }}</small>
+                        </div>
+                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                            <span class="text-white">{{ current_user.username[:1]|upper }}</span>
+                        </div>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <a class="dropdown-item" href="{{ url_for('auth.profile') }}">
+                            <i class="fas fa-user me-2"></i> Profile
+                        </a>
+                        <a class="dropdown-item" href="{{ url_for('auth.settings') }}">
+                            <i class="fas fa-cog me-2"></i> Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
+                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid" style="margin-top: 56px;">
+        <div class="row">
+            {% block content %}{% endblock %}
+        </div>
     </div>
-    
-    <div class="content" id="main-content">
-        {% block content %}{% endblock %}
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {% block scripts %}{% endblock %}
+
+    <!-- Toast Container for Notifications -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+                        <div class="toast-header {% if category == 'error' %}bg-danger text-white{% elif category == 'success' %}bg-success text-white{% else %}bg-primary text-white{% endif %}">
+                            <i class="fas {% if category == 'error' %}fa-exclamation-circle{% elif category == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+                            <strong class="me-auto">{{ category|title }}</strong>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                        </div>
+                        <div class="toast-body">
+                            {{ message }}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
     </div>
-    <h2>Export Financial Reports</h2>
 
-    <form action="#" method="post">
-        <label>Select Timeframe:</label>
-        <select id="timeframe">
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="yearly">Yearly</option>
-        </select>
-
-        <h3>Export as:</h3>
-        <button type="button" onclick="exportReport('csv')">Download CSV</button>
-        <button type="button" onclick="exportReport('excel')">Download Excel</button>
-        <button type="button" onclick="exportReport('pdf')">Download PDF</button>
-    </form>
-
+    <!-- Initialize Toasts -->
     <script>
-        function exportReport(format) {
-            var timeframe = document.getElementById("timeframe").value;
-            window.location.href = "/export/" + format + "/" + timeframe;
-        }
-
-        function toggleSidebar() {
-            let sidebar = document.getElementById("sidebar");
-            let content = document.getElementById("main-content");
-            sidebar.classList.toggle("collapsed");
-            content.classList.toggle("expanded");
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+            var toastList = toastElList.map(function(toastEl) {
+                return new bootstrap.Toast(toastEl);
+            });
+            toastList.forEach(toast => toast.show());
+        });
     </script>
 </body>
 </html>

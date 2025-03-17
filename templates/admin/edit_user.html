@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User - Company Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
+    <div class="relative py-3 sm:max-w-xl sm:mx-auto">
+        <div class="relative px-4 py-10 bg-white mx-8 md:mx-0 shadow rounded-3xl sm:p-10">
+            <div class="max-w-md mx-auto">
+                <div class="flex items-center space-x-5">
+                    <div class="block pl-2 font-semibold text-xl text-gray-700">
+                        <h2 class="leading-relaxed">Edit User: {{ user.username }}</h2>
+                    </div>
+                </div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="mt-4 p-4 rounded-md {{ 'bg-red-50 text-red-800' if category == 'error' else 'bg-green-50 text-green-800' }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form id="editUserForm" class="divide-y divide-gray-200" action="{{ url_for('auth.edit_user', user_id=user.id) }}" method="POST">
+                    {{ form.csrf_token }}
+                    <div class="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
+                        <div class="flex flex-col">
+                            <label class="leading-loose">Name</label>
+                            {{ form.name(class="px-4 py-2 border focus:ring-gray-500 focus:border-gray-900 w-full sm:text-sm border-gray-300 rounded-md focus:outline-none text-gray-600", placeholder="Full Name") }}
+                            {% if form.name.errors %}
+                                {% for error in form.name.errors %}
+                                    <div class="text-red-600 text-sm mt-1">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="leading-loose">Email</label>
+                            {{ form.email(class="px-4 py-2 border focus:ring-gray-500 focus:border-gray-900 w-full sm:text-sm border-gray-300 rounded-md focus:outline-none text-gray-600", placeholder="Email") }}
+                            {% if form.email.errors %}
+                                {% for error in form.email.errors %}
+                                    <div class="text-red-600 text-sm mt-1">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="leading-loose">Username</label>
+                            <input type="text" value="{{ user.username }}" disabled
+                                class="px-4 py-2 border bg-gray-100 w-full sm:text-sm border-gray-300 rounded-md focus:outline-none text-gray-600">
+                            <p class="text-sm text-gray-500 mt-1">Username cannot be changed</p>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="leading-loose">New Password</label>
+                            {{ form.password(class="px-4 py-2 border focus:ring-gray-500 focus:border-gray-900 w-full sm:text-sm border-gray-300 rounded-md focus:outline-none text-gray-600", placeholder="Leave blank to keep current password") }}
+                            {% if form.password.errors %}
+                                {% for error in form.password.errors %}
+                                    <div class="text-red-600 text-sm mt-1">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <div id="passwordStrength" class="mt-2 {% if not form.password.data %}hidden{% endif %}">
+                                <div class="text-sm font-medium mb-1">Password must contain:</div>
+                                <ul class="text-sm space-y-1">
+                                    <li id="lengthCheck" class="text-red-500">✗ At least 8 characters</li>
+                                    <li id="uppercaseCheck" class="text-red-500">✗ One uppercase letter</li>
+                                    <li id="lowercaseCheck" class="text-red-500">✗ One lowercase letter</li>
+                                    <li id="numberCheck" class="text-red-500">✗ One number</li>
+                                    <li id="specialCheck" class="text-red-500">✗ One special character</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="leading-loose">Confirm Password</label>
+                            {{ form.confirm_password(class="px-4 py-2 border focus:ring-gray-500 focus:border-gray-900 w-full sm:text-sm border-gray-300 rounded-md focus:outline-none text-gray-600", placeholder="Confirm new password") }}
+                            {% if form.confirm_password.errors %}
+                                {% for error in form.confirm_password.errors %}
+                                    <div class="text-red-600 text-sm mt-1">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="leading-loose">Role</label>
+                            {{ form.role(class="px-4 py-2 border focus:ring-gray-500 focus:border-gray-900 w-full sm:text-sm border-gray-300 rounded-md focus:outline-none text-gray-600") }}
+                            {% if form.role.errors %}
+                                {% for error in form.role.errors %}
+                                    <div class="text-red-600 text-sm mt-1">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="leading-loose">Department</label>
+                            {{ form.department(class="px-4 py-2 border focus:ring-gray-500 focus:border-gray-900 w-full sm:text-sm border-gray-300 rounded-md focus:outline-none text-gray-600", placeholder="Department") }}
+                            {% if form.department.errors %}
+                                {% for error in form.department.errors %}
+                                    <div class="text-red-600 text-sm mt-1">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="leading-loose">Position</label>
+                            {{ form.position(class="px-4 py-2 border focus:ring-gray-500 focus:border-gray-900 w-full sm:text-sm border-gray-300 rounded-md focus:outline-none text-gray-600", placeholder="Position") }}
+                            {% if form.position.errors %}
+                                {% for error in form.position.errors %}
+                                    <div class="text-red-600 text-sm mt-1">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="pt-4 flex items-center space-x-4">
+                        <a href="{{ url_for('auth.user_list') }}"
+                            class="flex justify-center items-center w-full text-gray-900 px-4 py-3 rounded-md focus:outline-none">
+                            <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg> Cancel
+                        </a>
+                        {{ form.submit(class="bg-blue-500 flex justify-center items-center w-full text-white px-4 py-3 rounded-md focus:outline-none hover:bg-blue-600", id="submitBtn") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('editUserForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const passwordInput = form.querySelector('input[name="password"]');
+    const confirmPasswordInput = form.querySelector('input[name="confirm_password"]');
+    const passwordStrength = document.getElementById('passwordStrength');
+    
+    // Password strength indicators
+    const lengthCheck = document.getElementById('lengthCheck');
+    const uppercaseCheck = document.getElementById('uppercaseCheck');
+    const lowercaseCheck = document.getElementById('lowercaseCheck');
+    const numberCheck = document.getElementById('numberCheck');
+    const specialCheck = document.getElementById('specialCheck');
+
+    function updatePasswordStrength() {
+        const password = passwordInput.value;
+        
+        // Only show password requirements if user is changing password
+        if (password) {
+            passwordStrength.classList.remove('hidden');
+            
+            // Update indicators
+            lengthCheck.className = password.length >= 8 ? 'text-green-500' : 'text-red-500';
+            lengthCheck.textContent = password.length >= 8 ? '✓ At least 8 characters' : '✗ At least 8 characters';
+            
+            uppercaseCheck.className = /[A-Z]/.test(password) ? 'text-green-500' : 'text-red-500';
+            uppercaseCheck.textContent = /[A-Z]/.test(password) ? '✓ One uppercase letter' : '✗ One uppercase letter';
+            
+            lowercaseCheck.className = /[a-z]/.test(password) ? 'text-green-500' : 'text-red-500';
+            lowercaseCheck.textContent = /[a-z]/.test(password) ? '✓ One lowercase letter' : '✗ One lowercase letter';
+            
+            numberCheck.className = /[0-9]/.test(password) ? 'text-green-500' : 'text-red-500';
+            numberCheck.textContent = /[0-9]/.test(password) ? '✓ One number' : '✗ One number';
+            
+            specialCheck.className = /[^A-Za-z0-9]/.test(password) ? 'text-green-500' : 'text-red-500';
+            specialCheck.textContent = /[^A-Za-z0-9]/.test(password) ? '✓ One special character' : '✗ One special character';
+
+            // Check if passwords match
+            if (confirmPasswordInput.value) {
+                if (password === confirmPasswordInput.value) {
+                    confirmPasswordInput.classList.remove('border-red-500');
+                    confirmPasswordInput.classList.add('border-green-500');
+                } else {
+                    confirmPasswordInput.classList.remove('border-green-500');
+                    confirmPasswordInput.classList.add('border-red-500');
+                }
+            }
+        } else {
+            passwordStrength.classList.add('hidden');
+            confirmPasswordInput.classList.remove('border-red-500', 'border-green-500');
+        }
+    }
+
+    passwordInput.addEventListener('input', updatePasswordStrength);
+    confirmPasswordInput.addEventListener('input', updatePasswordStrength);
+
+    // Form validation
+    form.addEventListener('submit', function(event) {
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+
+        // Only validate password if user is changing it
+        if (password) {
+            if (password !== confirmPassword) {
+                event.preventDefault();
+                alert('Passwords do not match!');
+                return;
+            }
+
+            if (password.length < 8 || 
+                !/[A-Z]/.test(password) || 
+                !/[a-z]/.test(password) || 
+                !/[0-9]/.test(password) || 
+                !/[^A-Za-z0-9]/.test(password)) {
+                event.preventDefault();
+                alert('Password does not meet the requirements!');
+                return;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

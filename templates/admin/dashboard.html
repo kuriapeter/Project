@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Company Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="section-header">
+        <h1>Admin Dashboard</h1>
+    </div>
+
+    <div class="admin-overview">
+        <div class="summary-cards">
+            <div class="card">
+                <h3>Total Users</h3>
+                <div class="amount" id="totalUsers">0</div>
+                <div class="trend">
+                    <span class="trend-value">+0%</span>
+                    <span class="trend-period">vs last month</span>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Active Users</h3>
+                <div class="amount" id="activeUsers">0</div>
+                <div class="trend">
+                    <span class="trend-value">+0%</span>
+                    <span class="trend-period">vs last month</span>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Total Transactions</h3>
+                <div class="amount" id="totalTransactions">0</div>
+                <div class="trend">
+                    <span class="trend-value">+0%</span>
+                    <span class="trend-period">vs last month</span>
+                </div>
+            </div>
+            <div class="card">
+                <h3>System Health</h3>
+                <div class="health-status">
+                    <span class="status-indicator healthy"></span>
+                    <span class="status-text">Healthy</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-sections">
+        <div class="admin-section">
+            <div class="section-header">
+                <h2>User Management</h2>
+                <button class="btn btn-primary" onclick="adminManager.showAddUserModal()">
+                    <i class="fas fa-user-plus"></i> Add User
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <!-- Users will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <div class="section-header">
+                <h2>System Logs</h2>
+                <div class="log-filters">
+                    <select id="logLevel" class="form-control">
+                        <option value="">All Levels</option>
+                        <option value="error">Error</option>
+                        <option value="warning">Warning</option>
+                        <option value="info">Info</option>
+                        <option value="debug">Debug</option>
+                    </select>
+                    <input type="text" id="logSearch" class="form-control" placeholder="Search logs...">
+                    <button class="btn btn-secondary" onclick="adminManager.exportLogs()">
+                        <i class="fas fa-download"></i> Export Logs
+                    </button>
+                </div>
+            </div>
+            <div class="log-container" id="logContainer">
+                <!-- Logs will be populated dynamically -->
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <div class="section-header">
+                <h2>System Health</h2>
+            </div>
+            <div class="health-metrics">
+                <div class="metric-card">
+                    <h3>CPU Usage</h3>
+                    <div class="metric-chart">
+                        <canvas id="cpuChart"></canvas>
+                    </div>
+                    <div class="metric-value" id="cpuValue">0%</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Memory Usage</h3>
+                    <div class="metric-chart">
+                        <canvas id="memoryChart"></canvas>
+                    </div>
+                    <div class="metric-value" id="memoryValue">0%</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Database Size</h3>
+                    <div class="metric-chart">
+                        <canvas id="dbSizeChart"></canvas>
+                    </div>
+                    <div class="metric-value" id="dbSizeValue">0 MB</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Response Time</h3>
+                    <div class="metric-chart">
+                        <canvas id="responseTimeChart"></canvas>
+                    </div>
+                    <div class="metric-value" id="responseTimeValue">0 ms</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <div class="section-header">
+                <h2>Backup & Maintenance</h2>
+            </div>
+            <div class="maintenance-actions">
+                <div class="action-card">
+                    <h3>Database Backup</h3>
+                    <p>Last backup: <span id="lastBackupTime">Never</span></p>
+                    <button class="btn btn-primary" onclick="adminManager.backupDatabase()">
+                        <i class="fas fa-database"></i> Backup Now
+                    </button>
+                </div>
+                <div class="action-card">
+                    <h3>Clear Cache</h3>
+                    <p>Cache size: <span id="cacheSize">0 MB</span></p>
+                    <button class="btn btn-secondary" onclick="adminManager.clearCache()">
+                        <i class="fas fa-broom"></i> Clear Cache
+                    </button>
+                </div>
+                <div class="action-card">
+                    <h3>System Updates</h3>
+                    <p>Current version: <span id="systemVersion">1.0.0</span></p>
+                    <button class="btn btn-secondary" onclick="adminManager.checkUpdates()">
+                        <i class="fas fa-sync"></i> Check Updates
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal" id="userModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add User</h2>
+            <button class="close-btn" onclick="adminManager.closeUserModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select id="role" name="role" class="form-control" required>
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="password-input">
+                        <input type="password" id="password" name="password" class="form-control" required>
+                        <button type="button" class="toggle-password" tabindex="-1">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="adminManager.closeUserModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="adminManager.saveUser()">Add User</button>
+        </div>
+    </div>
+</div>
+
+<!-- System Update Modal -->
+<div class="modal" id="updateModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>System Update Available</h2>
+            <button class="close-btn" onclick="adminManager.closeUpdateModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="update-info">
+                <h3>Version <span id="updateVersion">1.1.0</span></h3>
+                <div class="update-details">
+                    <h4>What's New:</h4>
+                    <ul id="updateChangelog">
+                        <!-- Changelog will be populated dynamically -->
+                    </ul>
+                </div>
+            </div>
+            <div class="update-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Please ensure all users save their work before proceeding with the update.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="adminManager.closeUpdateModal()">Later</button>
+            <button class="btn btn-primary" onclick="adminManager.installUpdate()">
+                <i class="fas fa-download"></i> Install Update
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}" defer></script>
+{% endblock %}

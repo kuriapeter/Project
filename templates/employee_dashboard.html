@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>Welcome, {{ current_user.first_name }}</h2>
+            <p class="text-muted">Employee Dashboard</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">My Profile</h5>
+                    <div class="profile-details">
+                        <p><strong>Name:</strong> {{ current_user.first_name }} {{ current_user.last_name }}</p>
+                        <p><strong>Email:</strong> {{ current_user.email }}</p>
+                        <p><strong>Username:</strong> {{ current_user.username }}</p>
+                        <p><strong>Role:</strong> {{ current_user.role.title() }}</p>
+                        <p><strong>Last Login:</strong> {{ current_user.last_login.strftime('%Y-%m-%d %H:%M:%S') if current_user.last_login else 'Never' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Quick Links</h5>
+                    <div class="list-group">
+                        {% if current_user.can_view_payroll() %}
+                        <a href="{{ url_for('payroll') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-money-bill-wave"></i> View Payroll
+                        </a>
+                        {% endif %}
+                        
+                        {% if current_user.can_view_transactions() %}
+                        <a href="{{ url_for('transactions') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-exchange-alt"></i> View Transactions
+                        </a>
+                        {% endif %}
+                        
+                        {% if current_user.can_view_budgets() %}
+                        <a href="{{ url_for('budgets') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-chart-pie"></i> View Budgets
+                        </a>
+                        {% endif %}
+                        
+                        {% if current_user.can_manage_users() %}
+                        <a href="{{ url_for('admin_user_management') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-users-cog"></i> User Management
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.role == 'hr' or current_user.role == 'admin' %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Recent Payroll Activity</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Amount (KSh)</th>
+                                    <th>Pay Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in payroll_data %}
+                                <tr>
+                                    <td>{{ record.employee_id }}</td>
+                                    <td>{{ '%.2f'|format(record.salary_amount) }}</td>
+                                    <td>{{ record.pay_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <span class="badge {% if record.status == 'paid' %}bg-success{% elif record.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ record.status.title() }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if current_user.role == 'finance' or current_user.role == 'admin' %}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Recent Transactions</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount (KSh)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in transactions %}
+                                <tr>
+                                    <td>{{ transaction.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ transaction.type.title() }}</td>
+                                    <td>{{ '%.2f'|format(transaction.amount) }}</td>
+                                    <td>
+                                        <span class="badge {% if transaction.status == 'completed' %}bg-success{% elif transaction.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ transaction.status.title() }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Budget Overview</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Budget (KSh)</th>
+                                    <th>Utilization</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for budget in budgets %}
+                                <tr>
+                                    <td>{{ budget.category }}</td>
+                                    <td>{{ '%.2f'|format(budget.amount) }}</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar {% if budget.utilization >= 90 %}bg-danger{% elif budget.utilization >= 75 %}bg-warning{% else %}bg-success{% endif %}"
+                                                role="progressbar"
+                                                style="width: {{ budget.utilization }}%"
+                                                aria-valuenow="{{ budget.utilization }}"
+                                                aria-valuemin="0"
+                                                aria-valuemax="100">
+                                                {{ '%.1f'|format(budget.utilization) }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

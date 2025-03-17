@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Company Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="section-header">
+        <h1>Profile Settings</h1>
+    </div>
+
+    <div class="profile-content">
+        <div class="profile-section">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    {% if current_user.avatar_url %}
+                        <img src="{{ current_user.avatar_url }}" alt="Profile picture">
+                    {% else %}
+                        <div class="avatar-placeholder">
+                            {{ current_user.name[0] }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="profile-info">
+                    <h2>{{ current_user.name }}</h2>
+                    <p>{{ current_user.email }}</p>
+                    <p class="role-badge">{{ current_user.role|title }}</p>
+                </div>
+            </div>
+
+            <form id="profileForm" class="form-container">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" class="form-control" value="{{ current_user.name }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" class="form-control" value="{{ current_user.email }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-control" value="{{ current_user.username }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="avatar">Profile Picture</label>
+                    <input type="file" id="avatar" name="avatar" class="form-control" accept="image/*">
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="profile-section">
+            <h3>Change Password</h3>
+            <form id="passwordForm" class="form-container">
+                <div class="form-group">
+                    <label for="currentPassword">Current Password</label>
+                    <div class="password-input">
+                        <input type="password" id="currentPassword" name="current_password" class="form-control" required>
+                        <button type="button" class="toggle-password" tabindex="-1">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <div class="password-input">
+                        <input type="password" id="newPassword" name="new_password" class="form-control" required>
+                        <button type="button" class="toggle-password" tabindex="-1">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="password-strength">
+                        <div class="strength-bar">
+                            <div class="strength-indicator"></div>
+                        </div>
+                        <span class="strength-text">Password strength: <span class="strength-value">Weak</span></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm New Password</label>
+                    <div class="password-input">
+                        <input type="password" id="confirmPassword" name="confirm_password" class="form-control" required>
+                        <button type="button" class="toggle-password" tabindex="-1">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-key"></i> Change Password
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="profile-section">
+            <h3>Account Security</h3>
+            <div class="security-settings">
+                <div class="security-option">
+                    <div class="option-header">
+                        <h4>Two-Factor Authentication</h4>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="twoFactorAuth" class="toggle-input">
+                            <label for="twoFactorAuth" class="toggle-label"></label>
+                        </div>
+                    </div>
+                    <p>Add an extra layer of security to your account by enabling two-factor authentication.</p>
+                </div>
+
+                <div class="security-option">
+                    <div class="option-header">
+                        <h4>Login Notifications</h4>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="loginNotifications" class="toggle-input">
+                            <label for="loginNotifications" class="toggle-label"></label>
+                        </div>
+                    </div>
+                    <p>Receive email notifications when someone logs into your account from a new device.</p>
+                </div>
+
+                <div class="security-option">
+                    <h4>Recent Login Activity</h4>
+                    <div class="activity-list">
+                        {% for activity in login_activity %}
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fas {{ 'fa-check-circle success' if activity.successful else 'fa-times-circle danger' }}"></i>
+                            </div>
+                            <div class="activity-details">
+                                <p class="activity-info">
+                                    {{ activity.ip_address }} - {{ activity.device }}
+                                    {% if activity.successful %}
+                                    <span class="badge badge-success">Successful</span>
+                                    {% else %}
+                                    <span class="badge badge-danger">Failed</span>
+                                    {% endif %}
+                                </p>
+                                <p class="activity-time">{{ activity.timestamp|datetime }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-section danger-zone">
+            <h3>Danger Zone</h3>
+            <div class="danger-actions">
+                <div class="danger-action">
+                    <div class="action-info">
+                        <h4>Delete Account</h4>
+                        <p>Permanently delete your account and all associated data. This action cannot be undone.</p>
+                    </div>
+                    <button class="btn btn-danger" onclick="profileManager.showDeleteAccountModal()">
+                        <i class="fas fa-trash"></i> Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Confirmation Modal -->
+<div class="modal" id="deleteAccountModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Delete Account</h2>
+            <button class="close-btn" onclick="profileManager.closeDeleteModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="warning-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>This action cannot be undone. All your data will be permanently deleted.</p>
+            </div>
+            <form id="deleteAccountForm">
+                <div class="form-group">
+                    <label for="deleteConfirmation">Type "DELETE" to confirm:</label>
+                    <input type="text" id="deleteConfirmation" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="deletePassword">Enter your password:</label>
+                    <input type="password" id="deletePassword" class="form-control" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="profileManager.closeDeleteModal()">Cancel</button>
+            <button class="btn btn-danger" onclick="profileManager.deleteAccount()">Delete Account</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/profile.js') }}" defer></script>
+{% endblock %}

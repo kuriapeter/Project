@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Insights - {{ current_month }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<style>
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .metric-card h3 {
+        margin: 0 0 1rem;
+        color: #2c3e50;
+        font-size: 1.2rem;
+    }
+
+    .employee-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .employee-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .employee-name {
+        font-size: 1.4rem;
+        color: #2c3e50;
+        margin: 0;
+    }
+
+    .employee-position {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-item {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+    }
+
+    .performance-score {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .score-high { background: #d4edda; color: #155724; }
+    .score-medium { background: #fff3cd; color: #856404; }
+    .score-low { background: #f8d7da; color: #721c24; }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+    }
+
+    .modal-content {
+        position: relative;
+        background: white;
+        margin: 10% auto;
+        padding: 2rem;
+        width: 90%;
+        max-width: 500px;
+        border-radius: 8px;
+    }
+
+    .close-modal {
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #7f8c8d;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .btn-primary {
+        background: #3498db;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #2980b9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Employee Insights - {{ current_month }}</h1>
+</div>
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <h3>Total Work Hours</h3>
+        <canvas id="workHoursChart"></canvas>
+    </div>
+    <div class="metric-card">
+        <h3>Performance Distribution</h3>
+        <canvas id="performanceChart"></canvas>
+    </div>
+    <div class="metric-card">
+        <h3>Leave Utilization</h3>
+        <canvas id="leaveChart"></canvas>
+    </div>
+</div>
+
+{% for insight in insights %}
+<div class="employee-card">
+    <div class="employee-header">
+        <div>
+            <h2 class="employee-name">{{ insight.employee.name }}</h2>
+            <div class="employee-position">{{ insight.employee.position or 'Position Not Set' }} - {{ insight.employee.department or 'Department Not Set' }}</div>
+        </div>
+        {% if insight.performance %}
+        <div class="performance-score {% if insight.performance.calculate_overall_score() >= 80 %}score-high{% elif insight.performance.calculate_overall_score() >= 60 %}score-medium{% else %}score-low{% endif %}">
+            Performance Score: {{ "%.1f"|format(insight.performance.calculate_overall_score()) }}%
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-value">{{ insight.total_hours }}</div>
+            <div class="stat-label">Hours Worked (30 days)</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ insight.total_overtime }}</div>
+            <div class="stat-label">Overtime Hours</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ insight.leave_summary.annual }}</div>
+            <div class="stat-label">Annual Leave Used</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ insight.leave_summary.sick + insight.leave_summary.personal }}</div>
+            <div class="stat-label">Other Leave Used</div>
+        </div>
+    </div>
+
+    {% if current_user.can_view_employee_insights() %}
+    <div class="action-buttons">
+        <button class="btn btn-primary" onclick="showModal('workLogModal{{ insight.employee.id }}')">Log Work Hours</button>
+        <button class="btn btn-primary" onclick="showModal('leaveModal{{ insight.employee.id }}')">Request Leave</button>
+        <button class="btn btn-primary" onclick="showModal('performanceModal{{ insight.employee.id }}')">Add Performance</button>
+    </div>
+
+    <!-- Work Log Modal -->
+    <div id="workLogModal{{ insight.employee.id }}" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="hideModal('workLogModal{{ insight.employee.id }}')">&times;</span>
+            <h3>Log Work Hours</h3>
+            <form action="{{ url_for('log_work', employee_id=insight.employee.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" name="date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Clock In</label>
+                    <input type="time" name="clock_in" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Clock Out</label>
+                    <input type="time" name="clock_out" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Break Duration (minutes)</label>
+                    <input type="number" name="break_duration" class="form-control" value="0" min="0">
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Leave Request Modal -->
+    <div id="leaveModal{{ insight.employee.id }}" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="hideModal('leaveModal{{ insight.employee.id }}')">&times;</span>
+            <h3>Request Leave</h3>
+            <form action="{{ url_for('request_leave', employee_id=insight.employee.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label>Leave Type</label>
+                    <select name="leave_type" class="form-control" required>
+                        <option value="annual">Annual Leave</option>
+                        <option value="sick">Sick Leave</option>
+                        <option value="personal">Personal Leave</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" name="start_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" name="end_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea name="notes" class="form-control" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Performance Modal -->
+    <div id="performanceModal{{ insight.employee.id }}" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="hideModal('performanceModal{{ insight.employee.id }}')">&times;</span>
+            <h3>Add Performance Metrics</h3>
+            <form action="{{ url_for('add_performance_metric', employee_id=insight.employee.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label>Productivity Score (0-100)</label>
+                    <input type="number" name="productivity_score" class="form-control" min="0" max="100" required>
+                </div>
+                <div class="form-group">
+                    <label>Quality Score (0-100)</label>
+                    <input type="number" name="quality_score" class="form-control" min="0" max="100" required>
+                </div>
+                <div class="form-group">
+                    <label>Attendance Score (0-100)</label>
+                    <input type="number" name="attendance_score" class="form-control" min="0" max="100" required>
+                </div>
+                <div class="form-group">
+                    <label>Goals Achieved</label>
+                    <input type="number" name="goals_achieved" class="form-control" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea name="notes" class="form-control" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+
+{# Pre-process data from Jinja to JavaScript #}
+{% with %}
+    {% set employee_data = {
+        'names': [insight.employee.name for insight in insights],
+        'regularHours': [(insight.total_hours - insight.total_overtime) for insight in insights],
+        'overtimeHours': [insight.total_overtime for insight in insights],
+        'performance': [
+            {
+                'name': insight.employee.name,
+                'scores': [
+                    insight.performance.productivity_score,
+                    insight.performance.quality_score,
+                    insight.performance.attendance_score
+                ]
+            } for insight in insights if insight.performance
+        ],
+        'leave': {
+            'annual': total_annual.value if total_annual is defined else 0,
+            'sick': total_sick.value if total_sick is defined else 0,
+            'personal': total_personal.value if total_personal is defined else 0
+        }
+    } %}
+
+<script>
+// Pre-process data from Jinja templates
+const rawData = {{ employee_data | tojson | safe }};
+const employeeData = Object.freeze(JSON.parse(JSON.stringify(rawData)));
+
+// Chart configuration
+const chartConfig = {
+    workHours: Object.freeze({
+        type: 'bar',
+        options: {
+            responsive: true,
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true }
+            }
+        }
+    }),
+    performance: Object.freeze({
+        type: 'radar',
+        options: {
+            responsive: true,
+            scales: {
+                r: {
+                    angleLines: { display: true },
+                    suggestedMin: 0,
+                    suggestedMax: 100
+                }
+            }
+        }
+    }),
+    leave: Object.freeze({
+        type: 'doughnut',
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    })
+};
+
+// Initialize charts when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Work Hours Chart
+    const workHoursCtx = document.getElementById('workHoursChart').getContext('2d');
+    const workHoursData = {
+        labels: employeeData.names,
+        datasets: [{
+            label: 'Regular Hours',
+            data: employeeData.regularHours,
+            backgroundColor: '#3498db'
+        }, {
+            label: 'Overtime Hours',
+            data: employeeData.overtimeHours,
+            backgroundColor: '#e74c3c'
+        }]
+    };
+    new Chart(workHoursCtx, {
+        type: chartConfig.workHours.type,
+        data: workHoursData,
+        options: chartConfig.workHours.options
+    });
+
+    // Performance Chart
+    const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+    const performanceData = {
+        labels: ['Productivity', 'Quality', 'Attendance'],
+        datasets: employeeData.performance.map(emp => ({
+            label: emp.name,
+            data: emp.scores,
+            fill: true,
+            backgroundColor: 'rgba(52, 152, 219, 0.2)',
+            borderColor: 'rgba(52, 152, 219, 1)',
+            pointBackgroundColor: 'rgba(52, 152, 219, 1)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgba(52, 152, 219, 1)'
+        }))
+    };
+    new Chart(performanceCtx, {
+        type: chartConfig.performance.type,
+        data: performanceData,
+        options: chartConfig.performance.options
+    });
+
+    // Leave Chart
+    const leaveCtx = document.getElementById('leaveChart').getContext('2d');
+    const leaveData = {
+        labels: ['Annual Leave', 'Sick Leave', 'Personal Leave'],
+        datasets: [{
+            data: [
+                employeeData.leave.annual,
+                employeeData.leave.sick,
+                employeeData.leave.personal
+            ],
+            backgroundColor: ['#2ecc71', '#e74c3c', '#f1c40f']
+        }]
+    };
+    new Chart(leaveCtx, {
+        type: chartConfig.leave.type,
+        data: leaveData,
+        options: chartConfig.leave.options
+    });
+});
+
+// Modal functions
+const showModal = (modalId) => {
+    document.getElementById(modalId).style.display = 'block';
+};
+
+const hideModal = (modalId) => {
+    document.getElementById(modalId).style.display = 'none';
+};
+
+// Close modal when clicking outside
+window.onclick = (event) => {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+    }
+};
+</script>
+{% endwith %}
+{% endblock %}

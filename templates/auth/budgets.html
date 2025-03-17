@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Budgets - Company Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="section-header">
+        <h1>Budget Management</h1>
+        <div class="actions">
+            <button class="btn btn-primary" onclick="budgetManager.showAddModal()">
+                <i class="fas fa-plus"></i> Add Budget
+            </button>
+            <button class="btn btn-secondary" id="exportBtn">
+                <i class="fas fa-download"></i> Export
+            </button>
+        </div>
+    </div>
+
+    <div class="budget-overview">
+        <div class="summary-cards">
+            <div class="card">
+                <h3>Total Budget</h3>
+                <div class="amount" id="totalBudget">$0.00</div>
+            </div>
+            <div class="card">
+                <h3>Total Spent</h3>
+                <div class="amount" id="totalSpent">$0.00</div>
+            </div>
+            <div class="card">
+                <h3>Remaining</h3>
+                <div class="amount" id="totalRemaining">$0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="budget-chart">
+        <div class="chart-card">
+            <h3>Budget vs Spending by Category</h3>
+            <canvas id="budgetChart"></canvas>
+        </div>
+    </div>
+
+    <div class="budget-list">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Budget Amount</th>
+                        <th>Spent</th>
+                        <th>Remaining</th>
+                        <th>Progress</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="budgetTableBody">
+                    {% for budget in budgets %}
+                    <tr data-id="{{ budget.id }}">
+                        <td>{{ budget.category }}</td>
+                        <td>{{ "${:,.2f}".format(budget.budget_amount) }}</td>
+                        <td>{{ "${:,.2f}".format(budget.spent_amount) }}</td>
+                        <td>{{ "${:,.2f}".format(budget.budget_amount - budget.spent_amount) }}</td>
+                        <td>
+                            <div class="progress">
+                                {% set percentage = (budget.spent_amount / budget.budget_amount * 100)|round %}
+                                <div class="progress-bar {{ 'danger' if percentage >= 100 else 'warning' if percentage >= 80 else 'success' }}"
+                                     style="width: {{ percentage if percentage <= 100 else 100 }}%">
+                                    {{ percentage }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn btn-icon" onclick="budgetManager.editBudget({{ budget.id }})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-icon" onclick="budgetManager.deleteBudget({{ budget.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Budget Modal -->
+<div class="modal" id="budgetModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Add Budget</h2>
+            <button class="close-btn" onclick="budgetManager.closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="budgetForm">
+                <input type="hidden" id="budgetId">
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" class="form-control" required>
+                        <!-- Categories will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="budgetAmount">Budget Amount</label>
+                    <input type="number" id="budgetAmount" name="budget_amount" class="form-control" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="startDate">Start Date</label>
+                    <input type="date" id="startDate" name="start_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="endDate">End Date</label>
+                    <input type="date" id="endDate" name="end_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" class="form-control" rows="3"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="budgetManager.closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="budgetManager.saveBudget()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal" id="deleteModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Delete Budget</h2>
+            <button class="close-btn" onclick="budgetManager.closeDeleteModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete this budget? This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="budgetManager.closeDeleteModal()">Cancel</button>
+            <button class="btn btn-danger" onclick="budgetManager.confirmDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/budgets.js') }}" defer></script>
+{% endblock %}

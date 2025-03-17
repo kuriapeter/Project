@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h2>{{ department.name }} - Budget Overview</h2>
+    
+    <!-- Budget Overview Card -->
+    <div class="card mb-4 budget-card">
+        <div class="card-header">
+            <h5 class="mb-0">Budget Overview</h5>
+        </div>
+        <div class="card-body budget-overview">
+            <div class="row">
+                <div class="col-md-4">
+                    <h6>Monthly Budget</h6>
+                    <p class="h3">${{ "%.2f"|format(department.budget_limit) }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Current Expenses</h6>
+                    <p class="h3">${{ "%.2f"|format(monthly_expenses) }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h6>Remaining</h6>
+                    <p class="h3 {{ 'text-success' if (department.budget_limit - monthly_expenses) >= 0 else 'text-danger' }}">${{ "%.2f"|format(department.budget_limit - monthly_expenses) }}</p>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <h6>Budget Utilization</h6>
+                {% set percentage = (monthly_expenses / department.budget_limit * 100) if department.budget_limit > 0 else 100 %}
+                <div class="progress" style="height: 25px;">
+                    <div class="progress-bar {% if percentage > 90 %}bg-danger{% elif percentage > 70 %}bg-warning{% else %}bg-success{% endif %}"
+                         role="progressbar"
+                         style="width: {{ percentage }}%"
+                         aria-valuenow="{{ percentage }}"
+                         aria-valuemin="0"
+                         aria-valuemax="100">
+                        {{ "%.1f"|format(percentage) }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expenses by Category -->
+    <div class="card mb-4 budget-card">
+        <div class="card-header">
+            <h5 class="mb-0">Expenses by Category</h5>
+        </div>
+        <div class="card-body budget-overview">
+            <div class="table-responsive">
+                <table class="budget-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>% of Total</th>
+                            <th>Visualization</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category, total in expenses_by_category %}
+                        {% set category_percentage = (total / monthly_expenses * 100) if monthly_expenses > 0 else 0 %}
+                        <tr>
+                            <td>{{ category }}</td>
+                            <td>${{ "%.2f"|format(total) }}</td>
+                            <td>{{ "%.1f"|format(category_percentage) }}%</td>
+                            <td>
+                                <div class="progress">
+                                    <div class="progress-bar bg-info"
+                                         role="progressbar"
+                                         style="width: {{ category_percentage }}%"
+                                         aria-valuenow="{{ category_percentage }}"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget vs Actual Chart -->
+    <div class="card budget-card">
+        <div class="card-header">
+            <h5 class="mb-0">Budget vs Actual Expenses</h5>
+        </div>
+        <div class="card-body budget-overview">
+            <div class="chart-container">
+                <canvas id="budgetChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<style>
+.budget-card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.budget-overview {
+    padding: 1.5rem;
+}
+
+.budget-table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+}
+
+.budget-table th,
+.budget-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.budget-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.chart-container {
+    height: 400px;
+    margin-top: 1rem;
+}
+
+.progress {
+    height: 20px;
+    margin-bottom: 1rem;
+    border-radius: 0.25rem;
+}
+
+.progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background-color: #007bff;
+    transition: width 0.6s ease;
+}
+
+.progress-bar.bg-danger {
+    background-color: #dc3545;
+}
+
+.progress-bar.bg-warning {
+    background-color: #ffc107;
+}
+
+.progress-bar.bg-success {
+    background-color: #28a745;
+}
+
+.progress-bar.bg-info {
+    background-color: #17a2b8;
+}
+</style>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const expenseData = JSON.parse(`[
+        {% for category, total in expenses_by_category %}
+            {
+                "category": "{{ category }}",
+                "amount": {{ total }},
+                "budget": {{ department.budget_limit / expenses_by_category|length }}
+            }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]`);
+
+    function initChart() {
+        const ctx = document.getElementById('budgetChart');
+        if (!ctx) {
+            console.error('Chart canvas not found');
+            return;
+        }
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: expenseData.map(item => item.category),
+                datasets: [
+                    {
+                        label: 'Actual Expenses',
+                        data: expenseData.map(item => item.amount),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Budget Allocation',
+                        data: expenseData.map(item => item.budget),
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        borderColor: 'rgb(255, 99, 132)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                return context.dataset.label + ': $' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    initChart();
+});
+</script>
+{% endblock %}

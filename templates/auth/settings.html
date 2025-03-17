@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Company Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<script>
+// Initialize user preferences module
+var userPrefs = (function() {
+    'use strict';
+
+    // Configuration variables from server
+    var config = {
+        csrfToken: {{ csrf_token()|tojson|safe }},
+        theme: {{ theme|tojson|safe }},
+        language: {{ language|tojson|safe }},
+        notifications: {{ notifications_enabled|tojson|safe }}
+    };
+
+    function showNotification(message, type) {
+        var notification = document.createElement('div');
+        notification.className = 'alert alert-' + type;
+        notification.textContent = message;
+        
+        var container = document.querySelector('.settings-content');
+        if (container) {
+            container.insertBefore(notification, container.firstChild);
+            
+            setTimeout(function() {
+                notification.remove();
+            }, 3000);
+        }
+    }
+
+    function handleResponse(response) {
+        return response.json().then(function(data) {
+            if (data.status === 'success') {
+                return data;
+            }
+            throw new Error(data.message || 'Failed to update preferences');
+        });
+    }
+
+    function updatePreference(endpoint, data) {
+        var headers = {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': config.csrfToken
+        };
+
+        var options = {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(data)
+        };
+
+        return fetch('/api/preferences/' + endpoint, options)
+            .then(handleResponse)
+            .then(function(data) {
+                if (endpoint !== 'notifications') {
+                    window.location.reload();
+                } else {
+                    showNotification('Notification preferences updated', 'success');
+                }
+                return data;
+            })
+            .catch(function(error) { 
+                console.error('Error:', error);
+                showNotification('Failed to update preferences', 'error');
+                throw error;
+            });
+    }
+
+    function initializeSettings() {
+        var themeSelect = document.getElementById('themeSelect');
+        var languageSelect = document.getElementById('languageSelect');
+        var emailNotifications = document.getElementById('emailNotifications');
+
+        if (themeSelect && languageSelect && emailNotifications) {
+            // Initialize form values
+            themeSelect.value = config.theme;
+            languageSelect.value = config.language;
+            emailNotifications.checked = config.notifications;
+
+            // Add event listeners
+            themeSelect.addEventListener('change', function() {
+                updatePreference('theme', { theme: this.value });
+            });
+
+            languageSelect.addEventListener('change', function() {
+                updatePreference('language', { language: this.value });
+            });
+
+            emailNotifications.addEventListener('change', function() {
+                updatePreference('notifications', { enabled: this.checked });
+            });
+        }
+    }
+
+    // Initialize on DOM ready
+    document.addEventListener('DOMContentLoaded', initializeSettings);
+
+    // Public API
+    return {
+        init: initializeSettings,
+        update: updatePreference,
+        notify: showNotification,
+        getConfig: function() {
+            return {
+                theme: config.theme,
+                language: config.language,
+                notifications: config.notifications
+            };
+        }
+    };
+})();
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="section-header">
+        <h1>Application Settings</h1>
+    </div>
+
+    <div class="settings-content">
+        <div class="settings-section">
+            <h3>Display Preferences</h3>
+            <div class="settings-group">
+                <div class="setting-item">
+                    <div class="setting-header">
+                        <h4>Theme</h4>
+                        <select id="themeSelect" class="form-control">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <p>Choose your preferred color theme for the application.</p>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-header">
+                        <h4>Language</h4>
+                        <select id="languageSelect" class="form-control">
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                        </select>
+                    </div>
+                    <p>Select your preferred language for the interface.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h3>Notification Settings</h3>
+            <div class="settings-group">
+                <div class="setting-item">
+                    <div class="setting-header">
+                        <h4>Email Notifications</h4>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="emailNotifications" class="toggle-input">
+                            <label for="emailNotifications" class="toggle-label"></label>
+                        </div>
+                    </div>
+                    <p>Receive important updates and alerts via email.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/settings.js') }}" defer></script>
+{% endblock %}

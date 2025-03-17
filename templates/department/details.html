@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{{ department.name }} Details</h2>
+        {% if current_user.can_manage_department(department.id) %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editDepartmentModal">
+            Edit Department
+        </button>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <!-- Department Overview -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Department Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="text-muted">Manager</label>
+                        <p class="h6">{{ department.manager.first_name + ' ' + department.manager.last_name if department.manager else 'Not Assigned' }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted">Budget Limit</label>
+                        <p class="h6">${{ "%.2f"|format(department.budget_limit) }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted">Monthly Expenses</label>
+                        <p class="h6">${{ "%.2f"|format(monthly_expenses) }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted">Monthly Income</label>
+                        <p class="h6">${{ "%.2f"|format(monthly_income) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employees -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Department Employees</h5>
+                    {% if current_user.can_manage_department(department.id) %}
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+                        Add Employee
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Email</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employee in employees %}
+                                <tr>
+                                    <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+                                    <td>{{ employee.role|title }}</td>
+                                    <td>{{ employee.email }}</td>
+                                    <td>
+                                        {% if current_user.can_manage_department(department.id) %}
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editEmployee({{ employee.id }})">Edit</button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Transactions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in transactions %}
+                                <tr>
+                                    <td>{{ transaction.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ transaction.description }}</td>
+                                    <td>{{ transaction.type|title }}</td>
+                                    <td>${{ "%.2f"|format(transaction.amount) }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if transaction.status == 'approved' else 'warning' }}">
+                                            {{ transaction.status|title }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Department Modal -->
+<div class="modal fade" id="editDepartmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Department</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('auth.edit_department', dept_id=department.id) }}">
+                    {{ form.csrf_token }}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Department Name</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ department.name }}" required>
+                    </div>
+                    {% if current_user.is_admin() %}
+                    <div class="mb-3">
+                        <label for="manager_id" class="form-label">Manager</label>
+                        <select class="form-select" id="manager_id" name="manager_id">
+                            <option value="">Select Manager</option>
+                            {% for user in managers %}
+                            <option value="{{ user.id }}" {{ 'selected' if department.manager_id == user.id }}>
+                                {{ user.first_name }} {{ user.last_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="budget_limit" class="form-label">Budget Limit</label>
+                        <input type="number" class="form-control" id="budget_limit" name="budget_limit" 
+                               value="{{ department.budget_limit }}" step="0.01" required>
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.table th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.25rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+</style>
+
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Company Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="section-header">
+        <h1>Financial Reports</h1>
+        <div class="actions">
+            <button class="btn btn-primary" id="generateReportBtn">
+                <i class="fas fa-file-export"></i> Generate Report
+            </button>
+        </div>
+    </div>
+
+    <div class="report-filters">
+        <div class="filter-group">
+            <label for="reportType">Report Type:</label>
+            <select id="reportType" class="form-control">
+                <option value="income_expense">Income & Expense Statement</option>
+                <option value="budget_analysis">Budget Analysis</option>
+                <option value="category_breakdown">Category Breakdown</option>
+                <option value="trend_analysis">Trend Analysis</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="dateRange">Date Range:</label>
+            <select id="dateRange" class="form-control">
+                <option value="this_month">This Month</option>
+                <option value="last_month">Last Month</option>
+                <option value="this_quarter">This Quarter</option>
+                <option value="last_quarter">Last Quarter</option>
+                <option value="this_year">This Year</option>
+                <option value="last_year">Last Year</option>
+                <option value="custom">Custom Range</option>
+            </select>
+        </div>
+        <div class="filter-group custom-date-range" style="display: none;">
+            <label>Custom Range:</label>
+            <div class="date-inputs">
+                <input type="date" id="startDate" class="form-control">
+                <span>to</span>
+                <input type="date" id="endDate" class="form-control">
+            </div>
+        </div>
+        <div class="filter-group">
+            <label for="format">Export Format:</label>
+            <select id="format" class="form-control">
+                <option value="pdf">PDF</option>
+                <option value="excel">Excel</option>
+                <option value="csv">CSV</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="report-preview">
+        <!-- Income & Expense Statement -->
+        <div id="incomeExpenseReport" class="report-section">
+            <div class="chart-card">
+                <h3>Income vs Expenses</h3>
+                <canvas id="incomeExpenseChart"></canvas>
+            </div>
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>Total Income</h3>
+                    <div class="amount success" id="totalIncome">$0.00</div>
+                </div>
+                <div class="card">
+                    <h3>Total Expenses</h3>
+                    <div class="amount danger" id="totalExpenses">$0.00</div>
+                </div>
+                <div class="card">
+                    <h3>Net Income</h3>
+                    <div class="amount" id="netIncome">$0.00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget Analysis -->
+        <div id="budgetAnalysisReport" class="report-section" style="display: none;">
+            <div class="chart-card">
+                <h3>Budget vs Actual Spending</h3>
+                <canvas id="budgetAnalysisChart"></canvas>
+            </div>
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>Total Budget</h3>
+                    <div class="amount" id="totalBudget">$0.00</div>
+                </div>
+                <div class="card">
+                    <h3>Total Spent</h3>
+                    <div class="amount" id="totalSpent">$0.00</div>
+                </div>
+                <div class="card">
+                    <h3>Variance</h3>
+                    <div class="amount" id="budgetVariance">$0.00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Breakdown -->
+        <div id="categoryBreakdownReport" class="report-section" style="display: none;">
+            <div class="chart-card">
+                <h3>Expense Categories</h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="category-list">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>% of Total</th>
+                            <th>Change vs Previous</th>
+                        </tr>
+                    </thead>
+                    <tbody id="categoryTableBody">
+                        <!-- Categories will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Trend Analysis -->
+        <div id="trendAnalysisReport" class="report-section" style="display: none;">
+            <div class="chart-card">
+                <h3>Financial Trends</h3>
+                <canvas id="trendChart"></canvas>
+            </div>
+            <div class="trend-metrics">
+                <div class="metric-card">
+                    <h3>Average Monthly Income</h3>
+                    <div class="amount" id="avgMonthlyIncome">$0.00</div>
+                    <div class="trend-indicator">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>0%</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <h3>Average Monthly Expenses</h3>
+                    <div class="amount" id="avgMonthlyExpenses">$0.00</div>
+                    <div class="trend-indicator">
+                        <i class="fas fa-arrow-down"></i>
+                        <span>0%</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <h3>Savings Rate</h3>
+                    <div class="amount" id="savingsRate">0%</div>
+                    <div class="trend-indicator">
+                        <i class="fas fa-equals"></i>
+                        <span>No change</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Report Modal -->
+<div class="modal" id="generateReportModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Generate Report</h2>
+            <button class="close-btn" onclick="reportManager.closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="progress-container">
+                <div class="progress">
+                    <div class="progress-bar" style="width: 0%"></div>
+                </div>
+                <p class="progress-text">Generating report...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/reports.js') }}" defer></script>
+{% endblock %}

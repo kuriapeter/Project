@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Company Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<style>
+    .login-container {
+        min-height: calc(100vh - var(--header-height) - var(--footer-height));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--spacing-lg);
+        background: linear-gradient(135deg, var(--background-primary) 0%, var(--background-secondary) 100%);
+    }
+
+    .login-card {
+        background-color: var(--card-bg);
+        border-radius: var(--border-radius-lg);
+        box-shadow: 0 4px 6px var(--shadow-color);
+        padding: var(--spacing-xl);
+        width: 100%;
+        max-width: 400px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .login-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: var(--spacing-xl);
+    }
+
+    .login-header .logo {
+        font-size: 2rem;
+        color: var(--primary-color);
+        margin-bottom: var(--spacing-md);
+    }
+
+    .login-header h1 {
+        font-size: 1.5rem;
+        color: var(--text-primary);
+        margin: var(--spacing-sm) 0;
+    }
+
+    .login-header p {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .form-group {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: var(--spacing-xs);
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: var(--spacing-sm) var(--spacing-md);
+        border: 2px solid var(--border-color);
+        border-radius: var(--border-radius-md);
+        background-color: var(--background-primary);
+        color: var(--text-primary);
+        transition: border-color var(--animation-speed-fast);
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .form-control::placeholder {
+        color: var(--text-secondary);
+    }
+
+    .password-wrapper {
+        position: relative;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: var(--spacing-md);
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .password-toggle:hover {
+        color: var(--text-primary);
+    }
+
+    .login-button {
+        width: 100%;
+        padding: var(--spacing-md);
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: var(--border-radius-md);
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color var(--animation-speed-fast);
+    }
+
+    .login-button:hover {
+        background-color: var(--primary-dark);
+    }
+
+    .login-button:disabled {
+        background-color: var(--text-disabled);
+        cursor: not-allowed;
+    }
+
+    .login-footer {
+        text-align: center;
+        margin-top: var(--spacing-lg);
+        padding-top: var(--spacing-lg);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .login-footer p {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .login-footer a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .login-footer a:hover {
+        text-decoration: underline;
+    }
+
+    .error-message {
+        color: var(--danger-color);
+        font-size: 0.9rem;
+        margin-top: var(--spacing-xs);
+    }
+
+    @media (max-width: 480px) {
+        .login-card {
+            padding: var(--spacing-lg);
+        }
+
+        .login-header .logo {
+            font-size: 1.75rem;
+        }
+
+        .login-header h1 {
+            font-size: 1.25rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h1>Welcome Back</h1>
+            <p>Sign in to access your financial dashboard</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
+            {{ form.csrf_token }}
+            
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                {{ form.username(class="form-control", placeholder="Enter your username", required=true, autocomplete="username", minlength="3", maxlength="50") }}
+                {% if form.username.errors %}
+                    {% for error in form.username.errors %}
+                        <div class="error-message">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <div class="password-wrapper">
+                    {{ form.password(class="form-control", placeholder="Enter your password", required=true, autocomplete="current-password") }}
+                    <button type="button" class="password-toggle" onclick="togglePassword()">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                {% if form.password.errors %}
+                    {% for error in form.password.errors %}
+                        <div class="error-message">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-check">
+                    {{ form.remember_me(class="form-check-input") }}
+                    <span class="form-check-label">Remember me</span>
+                </label>
+            </div>
+
+            <button type="submit" class="login-button" id="loginButton">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </form>
+
+        <div class="login-footer">
+            <p>Forgot your password? <a href="{{ url_for('auth.reset_password') }}">Reset it here</a></p>
+            <p>Don't have an account? Contact your administrator</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('loginForm');
+    const loginButton = document.getElementById('loginButton');
+    const passwordInput = document.querySelector('input[type="password"]');
+    const passwordToggle = document.querySelector('.password-toggle');
+    let isPasswordVisible = false;
+
+    // Password visibility toggle
+    passwordToggle.addEventListener('click', function() {
+        isPasswordVisible = !isPasswordVisible;
+        passwordInput.type = isPasswordVisible ? 'text' : 'password';
+        this.querySelector('i').className = isPasswordVisible ? 'fas fa-eye-slash' : 'fas fa-eye';
+    });
+
+    // Form submission handling
+    form.addEventListener('submit', function(e) {
+        // Disable button and show loading state
+        loginButton.disabled = true;
+        loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
+        
+        // Let the form submit normally
+        return true;
+    });
+
+    // Input validation
+    const inputs = form.querySelectorAll('input[required]');
+    inputs.forEach(input => {
+        input.addEventListener('input', () => {
+            const isFormValid = Array.from(inputs).every(input => input.value.trim().length >= (input.minLength || 1));
+            loginButton.disabled = !isFormValid;
+        });
+    });
+});
+</script>
+{% endblock %}

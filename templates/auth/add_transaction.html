@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Add Transaction - Company Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/forms.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-header">
+        <h1>Add Transaction</h1>
+        <p class="subtitle">Record a new income or expense</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form id="transactionForm" method="POST" action="{{ url_for('auth.add_transaction') }}">
+        {{ form.csrf_token }}
+        
+        <div class="form-group">
+            <label for="type">Transaction Type</label>
+            {{ form.type(class="form-select", required=true) }}
+            {% if form.type.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.type.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="amount">Amount</label>
+            <div class="input-group">
+                <span class="input-group-text">$</span>
+                {{ form.amount(class="form-control", min="0.01", step="0.01", required=true, placeholder="0.00") }}
+            </div>
+            {% if form.amount.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.amount.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="category">Category</label>
+            {{ form.category(class="form-select", required=true) }}
+            {% if form.category.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.category.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            {{ form.description(class="form-control", rows="3", maxlength="200", placeholder="Enter transaction details") }}
+            <div class="char-counter">
+                <span id="charCount">0</span>/200
+            </div>
+            {% if form.description.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.description.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="date">Date</label>
+            {{ form.date(class="form-control", required=true, placeholder="Select date") }}
+            {% if form.date.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.date.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.history.back()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                <i class="fas fa-save"></i> Save Transaction
+                <div class="spinner-border spinner-border-sm d-none" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize date picker
+    flatpickr("#date", {
+        enableTime: false,
+        dateFormat: "Y-m-d",
+        maxDate: "today",
+        defaultDate: "today"
+    });
+
+    // Character counter for description
+    const description = document.getElementById('description');
+    const charCount = document.getElementById('charCount');
+
+    description.addEventListener('input', function() {
+        const remaining = this.value.length;
+        charCount.textContent = remaining;
+        
+        if (remaining >= 190) {
+            charCount.classList.add('text-danger');
+        } else {
+            charCount.classList.remove('text-danger');
+        }
+    });
+
+    // Form submission handling
+    const form = document.getElementById('transactionForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = submitBtn.querySelector('.spinner-border');
+
+    form.addEventListener('submit', function(event) {
+        submitBtn.disabled = true;
+        spinner.classList.remove('d-none');
+    });
+
+    // Amount formatting
+    const amount = document.getElementById('amount');
+    amount.addEventListener('blur', function() {
+        if (this.value) {
+            this.value = parseFloat(this.value).toFixed(2);
+        }
+    });
+
+    // CSRF token refresh
+    setInterval(async function() {
+        try {
+            const response = await fetch("{{ url_for('auth.refresh_csrf') }}");
+            const data = await response.json();
+            document.querySelector('input[name="csrf_token"]').value = data.csrf_token;
+        } catch (error) {
+            console.error('Error refreshing CSRF token:', error);
+        }
+    }, 3600000); // Refresh every hour
+});
+</script>
+{% endblock %}

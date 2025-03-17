@@ -1,0 +1,44 @@
+<nav class="main-nav">
+    <div class="nav-brand">
+        <button class="navbar-toggle" aria-label="Toggle navigation">
+            <span class="navbar-toggle-icon"></span>
+        </button>
+        <a href="{{ url_for('auth.dashboard') }}" data-i18n="dashboard">Finance Tracker</a>
+    </div>
+    {% if current_user.is_authenticated %}
+    <div class="nav-links">
+        <a href="{{ url_for('auth.dashboard') }}" class="nav-link {% if request.endpoint == 'auth.dashboard' %}active{% endif %}" data-i18n="dashboard">Dashboard</a>
+        <a href="{{ url_for('auth.view_transactions') }}" class="nav-link {% if request.endpoint == 'auth.view_transactions' %}active{% endif %}" data-i18n="transactions">Transactions</a>
+        <a href="{{ url_for('auth.get_budgets') }}" class="nav-link {% if request.endpoint == 'auth.get_budgets' %}active{% endif %}" data-i18n="budgets">Budgets</a>
+        {% if current_user.can_view_payroll() %}
+        <a href="{{ url_for('auth.get_payroll_overview') }}" class="nav-link {% if request.endpoint == 'auth.get_payroll_overview' %}active{% endif %}" data-i18n="payroll">Payroll</a>
+        {% endif %}
+        {% if current_user.can_manage_users() %}
+        <a href="{{ url_for('auth.user_list') }}" class="nav-link {% if request.endpoint == 'auth.user_list' %}active{% endif %}" data-i18n="users">Users</a>
+        {% endif %}
+    </div>
+    <div class="nav-user">
+        <div class="user-settings">
+            <select id="language-select" class="form-control form-control-sm" onchange="setLanguage(this.value)" aria-label="Select language">
+                <option value="en" {% if language == 'en' %}selected{% endif %}>English</option>
+                <option value="es" {% if language == 'es' %}selected{% endif %}>Español</option>
+            </select>
+            <button id="theme-toggle" class="btn btn-sm" onclick="toggleTheme()" aria-label="Toggle theme">
+                <span class="theme-icon light" data-i18n="dark_mode">Dark Mode</span>
+                <span class="theme-icon dark" data-i18n="light_mode">Light Mode</span>
+            </button>
+            <div class="notification-wrapper">
+                <button id="notification-toggle" class="btn btn-sm btn-info" onclick="toggleNotifications()" aria-label="Toggle notifications">
+                    <span class="notification-icon" data-i18n="notifications">Notifications</span>
+                    <span id="notification-count" class="badge badge-danger" style="display: none;">0</span>
+                </button>
+                <div id="notification-dropdown" class="notification-dropdown">
+                    <div id="notification-list" class="notification-list"></div>
+                </div>
+            </div>
+        </div>
+        <span class="user-name">{{ current_user.name }}</span>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-sm" data-i18n="logout">Logout</a>
+    </div>
+    {% endif %}
+</nav>

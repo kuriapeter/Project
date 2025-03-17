@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ department.name }} - Transactions</h2>
+    
+    <!-- Transaction Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="filterForm" class="row g-3">
+                <div class="col-md-3">
+                    <label for="dateRange" class="form-label">Date Range</label>
+                    <select class="form-select" id="dateRange">
+                        <option value="7">Last 7 days</option>
+                        <option value="30" selected>Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                        <option value="all">All time</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="type" class="form-label">Type</label>
+                    <select class="form-select" id="type">
+                        <option value="all" selected>All</option>
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status">
+                        <option value="all" selected>All</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="category" class="form-label">Category</label>
+                    <select class="form-select" id="category">
+                        <option value="all" selected>All Categories</option>
+                        {% for transaction in transactions %}
+                        <option value="{{ transaction.category }}">{{ transaction.category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="transactionsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Approver</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr class="transaction-row"
+                            data-date="{{ transaction.date.strftime('%Y-%m-%d') }}"
+                            data-type="{{ transaction.type }}"
+                            data-status="{{ transaction.status }}"
+                            data-category="{{ transaction.category }}">
+                            <td>{{ transaction.date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ transaction.type|title }}</td>
+                            <td>${{ "%.2f"|format(transaction.amount) }}</td>
+                            <td>{{ transaction.category }}</td>
+                            <td>{{ transaction.description }}</td>
+                            <td>
+                                <span class="badge {% if transaction.status == 'approved' %}bg-success
+                                                  {% elif transaction.status == 'rejected' %}bg-danger
+                                                  {% else %}bg-warning{% endif %}">
+                                    {{ transaction.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if transaction.approver %}
+                                    {{ transaction.approver.name }}
+                                    {% if transaction.approval_date %}
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ transaction.approval_date.strftime('%Y-%m-%d') }}
+                                        </small>
+                                    {% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filterForm');
+    const transactionRows = document.querySelectorAll('.transaction-row');
+    
+    // Filter transactions when any filter changes
+    filterForm.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', filterTransactions);
+    });
+    
+    function filterTransactions() {
+        const dateRange = document.getElementById('dateRange').value;
+        const type = document.getElementById('type').value;
+        const status = document.getElementById('status').value;
+        const category = document.getElementById('category').value;
+        
+        const today = new Date();
+        const cutoffDate = new Date();
+        if (dateRange !== 'all') {
+            cutoffDate.setDate(today.getDate() - parseInt(dateRange));
+        }
+        
+        transactionRows.forEach(row => {
+            const rowDate = new Date(row.dataset.date);
+            const rowType = row.dataset.type;
+            const rowStatus = row.dataset.status;
+            const rowCategory = row.dataset.category;
+            
+            const dateMatch = dateRange === 'all' || rowDate >= cutoffDate;
+            const typeMatch = type === 'all' || rowType === type;
+            const statusMatch = status === 'all' || rowStatus === status;
+            const categoryMatch = category === 'all' || rowCategory === category;
+            
+            if (dateMatch && typeMatch && statusMatch && categoryMatch) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+    
+    // Remove duplicate category options
+    const categorySelect = document.getElementById('category');
+    const seen = new Set();
+    Array.from(categorySelect.options).forEach(option => {
+        if (seen.has(option.value)) {
+            categorySelect.removeChild(option);
+        } else {
+            seen.add(option.value);
+        }
+    });
+});
+</script>
+{% endblock %}

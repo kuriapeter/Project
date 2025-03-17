@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2>Department Management</h2>
+
+    <!-- Department Overview -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Department Overview</h5>
+            {% if current_user.is_admin() %}
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+                Add Department
+            </button>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Manager</th>
+                            <th>Budget Limit</th>
+                            <th>Current Month Expenses</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dept in departments %}
+                        <tr>
+                            <td>{{ dept.name }}</td>
+                            <td>{{ dept.manager.first_name if dept.manager else 'Not Assigned' }}</td>
+                            <td>${{ "%.2f"|format(dept.budget_limit) }}</td>
+                            <td>${{ "%.2f"|format(dept.get_monthly_expenses()) }}</td>
+                            <td>
+                                {% if current_user.is_admin() or current_user.can_manage_department(dept.id) %}
+                                <button class="btn btn-sm btn-outline-primary" onclick="editDepartment({{ dept.id }})">Edit</button>
+                                {% endif %}
+                                <a href="{{ url_for('auth.department_details', dept_id=dept.id) }}" class="btn btn-sm btn-info">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Department Modal -->
+    <div class="modal fade" id="addDepartmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Department</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addDepartmentForm" method="POST" action="{{ url_for('auth.add_department') }}">
+                        {{ form.csrf_token }}
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Department Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="manager_id" class="form-label">Manager</label>
+                            <select class="form-select" id="manager_id" name="manager_id">
+                                <option value="">Select Manager</option>
+                                {% for user in managers %}
+                                <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="budget_limit" class="form-label">Budget Limit</label>
+                            <input type="number" class="form-control" id="budget_limit" name="budget_limit" step="0.01" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Department</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.table th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.btn-group-sm > .btn,
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+}
+</style>
+
+{% endblock %}

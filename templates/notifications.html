@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications - Company Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.dashboard') }}">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('auth.get_notifications') }}">
+                            <i class="fas fa-bell"></i> Notifications
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Notifications</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="markAllAsRead()">
+                        <i class="fas fa-check-double"></i> Mark All as Read
+                    </button>
+                </div>
+            </div>
+
+            <!-- Notifications List -->
+            <div class="notifications-list">
+                {% for notification in notifications %}
+                <div class="card mb-3 notification-card animate-fade-in" data-notification-id="{{ notification.id }}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title mb-1">
+                                    <i class="fas fa-{{ notification.type | lower }}-circle text-{{ notification.type }}"></i>
+                                    {{ notification.message }}
+                                </h5>
+                                <p class="card-text text-muted mb-2">{{ notification.details }}</p>
+                                <small class="text-muted">{{ notification.timestamp | datetime }}</small>
+                            </div>
+                            <button class="btn btn-link text-muted" onclick="markAsRead('{{ notification.id }}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h4>All Caught Up!</h4>
+                    <p class="text-muted">You have no new notifications.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function markAsRead(notificationId) {
+    fetch(`/auth/api/notifications/${notificationId}/read`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const notification = document.querySelector(`[data-notification-id="${notificationId}"]`);
+            if (notification) {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    notification.remove();
+                    checkEmptyState();
+                }, 300);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error marking notification as read:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Failed to mark notification as read. Please try again.'
+        });
+    });
+}
+
+function markAllAsRead() {
+    fetch('/auth/api/notifications/mark-all-read', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const notifications = document.querySelectorAll('.notification-card');
+            notifications.forEach(notification => {
+                notification.style.opacity = '0';
+            });
+            setTimeout(() => {
+                notifications.forEach(notification => notification.remove());
+                checkEmptyState();
+            }, 300);
+        }
+    })
+    .catch(error => {
+        console.error('Error marking all notifications as read:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Failed to mark all notifications as read. Please try again.'
+        });
+    });
+}
+
+function checkEmptyState() {
+    const notificationsList = document.querySelector('.notifications-list');
+    if (notificationsList.children.length === 0) {
+        notificationsList.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h4>All Caught Up!</h4>
+                <p class="text-muted">You have no new notifications.</p>
+            </div>
+        `;
+    }
+}
+
+// Update notification count in the header
+function updateNotificationCount() {
+    fetch('/auth/api/notifications')
+        .then(response => response.json())
+        .then(data => {
+            const badge = document.querySelector('.notification-count');
+            if (badge) {
+                badge.textContent = data.unread;
+                badge.style.display = data.unread > 0 ? 'flex' : 'none';
+            }
+        })
+        .catch(error => console.error('Error updating notification count:', error));
+}
+
+// Update notification count every minute
+setInterval(updateNotificationCount, 60000);
+</script>
+{% endblock %}

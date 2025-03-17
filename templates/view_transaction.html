@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}View Transaction - Company Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="transaction-detail-container">
+    <div class="page-header">
+        <h1>Transaction Details</h1>
+        {% if current_user.role in ['admin', 'accountant'] %}
+        <div class="header-actions">
+            <a href="{{ url_for('edit_transaction', id=transaction.id) }}" class="btn btn-warning">Edit</a>
+            <form action="{{ url_for('delete_transaction', id=transaction.id) }}" method="POST" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this transaction?')">Delete</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="transaction-details">
+        <div class="detail-group">
+            <label>Type:</label>
+            <span class="badge badge-{{ 'success' if transaction.type == 'income' else 'danger' }}">
+                {{ transaction.type|title }}
+            </span>
+        </div>
+
+        <div class="detail-group">
+            <label>Amount:</label>
+            <span class="amount">${{ "%.2f"|format(transaction.amount) }}</span>
+        </div>
+
+        <div class="detail-group">
+            <label>Date:</label>
+            <span>{{ transaction.date.strftime('%Y-%m-%d') }}</span>
+        </div>
+
+        <div class="detail-group">
+            <label>Category:</label>
+            <span>{{ transaction.category }}</span>
+        </div>
+
+        <div class="detail-group">
+            <label>Description:</label>
+            <p class="description">{{ transaction.description }}</p>
+        </div>
+
+        <div class="detail-group">
+            <label>Status:</label>
+            <span class="badge badge-{{ 'success' if transaction.status == 'approved' else 'warning' }}">
+                {{ transaction.status|title }}
+            </span>
+        </div>
+
+        <div class="detail-group">
+            <label>Created By:</label>
+            <span>{{ transaction.created_by_user.name if transaction.created_by_user else 'Unknown' }}</span>
+        </div>
+
+        {% if transaction.updated_at and transaction.updated_at != transaction.created_at %}
+        <div class="detail-group">
+            <label>Last Updated:</label>
+            <span>{{ transaction.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="form-actions">
+        <a href="{{ url_for('view_transactions') }}" class="btn btn-secondary">Back to Transactions</a>
+    </div>
+</div>
+{% endblock %}

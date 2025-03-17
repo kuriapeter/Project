@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Payroll Overview - Company Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="payroll-container">
+    <div class="page-header">
+        <h1>Payroll Management</h1>
+        {% if current_user.role in ['admin', 'accountant'] %}
+        <div class="header-actions">
+            <a href="{{ url_for('add_payroll') }}" class="btn btn-primary">Add Payroll Record</a>
+        </div>
+        {% endif %}
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="payroll-overview">
+        <div class="overview-card">
+            <h3>Current Month Overview</h3>
+            <div class="overview-stats">
+                <div class="stat-item">
+                    <span class="label">Total Payroll</span>
+                    <span class="value">KSh {{ '%.2f'|format(total_payroll) }}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">Records</span>
+                    <span class="value">{{ payroll_records|length }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="overview-card">
+            <h3>Historical Data</h3>
+            <div class="historical-chart">
+                <canvas id="payrollChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="payroll-records">
+        <h2>Current Month Records</h2>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Amount</th>
+                        <th>Pay Date</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                        {% if current_user.role in ['admin', 'accountant'] %}
+                        <th>Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in payroll_records %}
+                    <tr>
+                        <td>{{ record.employee_id }}</td>
+                        <td>KSh {{ '%.2f'|format(record.salary_amount) }}</td>
+                        <td>{{ record.pay_date.strftime('%Y-%m-%d') }}</td>
+                        <td><span class="badge bg-{{ 'success' if record.status == 'completed' else 'warning' }}">{{ record.status }}</span></td>
+                        <td>{{ record.notes }}</td>
+                        {% if current_user.role in ['admin', 'accountant'] %}
+                        <td>
+                            <div class="btn-group">
+                                <a href="{{ url_for('edit_payroll', id=record.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                <form action="{{ url_for('delete_payroll', id=record.id) }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this payroll record?')">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{{ 6 if current_user.role in ['admin', 'accountant'] else 5 }}" class="text-center">
+                            No payroll records found for the current month.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+.payroll-container {
+    padding: 2rem;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.payroll-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.overview-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.overview-card h3 {
+    margin: 0 0 1rem;
+    color: #2c3e50;
+    font-size: 1.25rem;
+}
+
+.overview-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-item .label {
+    display: block;
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-item .value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.historical-chart {
+    height: 300px;
+    margin-top: 1rem;
+}
+
+.payroll-records {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.payroll-records h2 {
+    margin: 0 0 1.5rem;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.table {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table td, .table th {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+.btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.badge {
+    padding: 0.5em 0.75em;
+    font-size: 0.875em;
+}
+
+.bg-success {
+    background-color: #28a745;
+}
+
+.bg-warning {
+    background-color: #ffc107;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('payrollChart').getContext('2d');
+    const historicalData = {{ historical_data|tojson }};
+    
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: historicalData.map(d => d.month),
+            datasets: [{
+                label: 'Total Payroll',
+                data: historicalData.map(d => d.total),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const data = historicalData[context.dataIndex];
+                            return [
+                                'Total: KSh ' + data.total.toLocaleString(),
+                                'Records: ' + data.count
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'KSh ' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

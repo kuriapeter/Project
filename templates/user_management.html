@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - User Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        .btn {
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .btn:hover {
+            background-color: #218838;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        .actions button {
+            margin-right: 5px;
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .edit-btn {
+            background-color: #ffc107;
+            color: black;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 5px 10px;
+            margin: 2px;
+            border: 1px solid #007bff;
+            background-color: white;
+            cursor: pointer;
+        }
+        .pagination button.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+        .modal input, .modal select {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+        }
+        .modal .btn {
+            width: 100%;
+        }
+        .close {
+            float: right;
+            cursor: pointer;
+            color: red;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Admin - User Management</h2>
+    <button class="btn" onclick="openModal('addUserModal')">Add User</button>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="userTableBody">
+            <!-- Users will be dynamically inserted here -->
+        </tbody>
+    </table>
+
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal" id="addUserModal">
+    <span class="close" onclick="closeModal('addUserModal')">&times;</span>
+    <h3>Add User</h3>
+    <input type="text" id="newUsername" placeholder="Username">
+    <select id="newUserRole">
+        <option value="admin">Admin</option>
+        <option value="accountant">Accountant</option>
+        <option value="employee">Employee</option>
+    </select>
+    <button class="btn" onclick="addUser()">Add</button>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal" id="editUserModal">
+    <span class="close" onclick="closeModal('editUserModal')">&times;</span>
+    <h3>Edit User</h3>
+    <input type="hidden" id="editUserId">
+    <input type="text" id="editUsername" placeholder="Username">
+    <select id="editUserRole">
+        <option value="admin">Admin</option>
+        <option value="accountant">Accountant</option>
+        <option value="employee">Employee</option>
+    </select>
+    <button class="btn" onclick="updateUser()">Save Changes</button>
+</div>
+
+<script>
+    let users = [
+        { id: 1, username: "admin1", role: "admin" },
+        { id: 2, username: "john_doe", role: "accountant" },
+        { id: 3, username: "jane_doe", role: "employee" }
+    ];
+    let usersPerPage = 5;
+    let currentPage = 1;
+
+    function renderUsers() {
+        let start = (currentPage - 1) * usersPerPage;
+        let end = start + usersPerPage;
+        let paginatedUsers = users.slice(start, end);
+
+        let tableBody = document.getElementById("userTableBody");
+        tableBody.innerHTML = "";
+        paginatedUsers.forEach(user => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${user.id}</td>
+                    <td>${user.username}</td>
+                    <td>${user.role}</td>
+                    <td class="actions">
+                        <button class="edit-btn" onclick="openEditModal(${user.id})">Edit</button>
+                        <button class="delete-btn" onclick="deleteUser(${user.id})">Delete</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        renderPagination();
+    }
+
+    function renderPagination() {
+        let totalPages = Math.ceil(users.length / usersPerPage);
+        let paginationDiv = document.getElementById("pagination");
+        paginationDiv.innerHTML = "";
+
+        for (let i = 1; i <= totalPages; i++) {
+            paginationDiv.innerHTML += `<button class="${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+        }
+    }
+
+    function changePage(page) {
+        currentPage = page;
+        renderUsers();
+    }
+
+    function openModal(id) {
+        document.getElementById(id).style.display = "block";
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).style.display = "none";
+    }
+
+    function addUser() {
+        let username = document.getElementById("newUsername").value;
+        let role = document.getElementById("newUserRole").value;
+        let id = users.length + 1;
+
+        users.push({ id, username, role });
+        renderUsers();
+        closeModal("addUserModal");
+    }
+
+    function openEditModal(id) {
+        let user = users.find(u => u.id === id);
+        document.getElementById("editUserId").value = user.id;
+        document.getElementById("editUsername").value = user.username;
+        document.getElementById("editUserRole").value = user.role;
+        openModal("editUserModal");
+    }
+
+    function updateUser() {
+        let id = parseInt(document.getElementById("editUserId").value);
+        let username = document.getElementById("editUsername").value;
+        let role = document.getElementById("editUserRole").value;
+
+        let user = users.find(u => u.id === id);
+        user.username = username;
+        user.role = role;
+
+        renderUsers();
+        closeModal("editUserModal");
+    }
+
+    function deleteUser(id) {
+        users = users.filter(u => u.id !== id);
+        renderUsers();
+    }
+
+    renderUsers();
+</script>
+
+</body>
+</html>

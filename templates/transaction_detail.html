@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction Details - Company Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="transaction-detail-container">
+    <div class="page-header">
+        <h1>Transaction Details</h1>
+        <div class="header-actions">
+            {% if current_user.role in ['admin', 'accountant'] %}
+            <a href="{{ url_for('edit_transaction', id=transaction.id) }}" class="btn btn-warning">Edit Transaction</a>
+            <form action="{{ url_for('delete_transaction', id=transaction.id) }}" method="POST" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this transaction?')">
+                    Delete Transaction
+                </button>
+            </form>
+            {% endif %}
+            <a href="{{ url_for('view_transactions') }}" class="btn btn-secondary">Back to Transactions</a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="transaction-info">
+        <div class="info-group">
+            <label>Type:</label>
+            <span class="badge badge-{{ 'success' if transaction.type == 'income' else 'danger' }}">
+                {{ transaction.type|title }}
+            </span>
+        </div>
+
+        <div class="info-group">
+            <label>Amount:</label>
+            <span class="amount">${{ "%.2f"|format(transaction.amount) }}</span>
+        </div>
+
+        <div class="info-group">
+            <label>Category:</label>
+            <span>{{ transaction.category }}</span>
+        </div>
+
+        <div class="info-group">
+            <label>Date:</label>
+            <span>{{ transaction.date.strftime('%Y-%m-%d') }}</span>
+        </div>
+
+        <div class="info-group">
+            <label>Status:</label>
+            <span class="badge badge-{{ 'success' if transaction.status == 'completed' else 'warning' }}">
+                {{ transaction.status|title }}
+            </span>
+        </div>
+
+        <div class="info-group description">
+            <label>Description:</label>
+            <p>{{ transaction.description or 'No description provided.' }}</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.transaction-detail-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.transaction-info {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.info-group {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    align-items: center;
+}
+
+.info-group.description {
+    grid-template-columns: 120px 1fr;
+}
+
+.info-group label {
+    font-weight: bold;
+    color: #666;
+}
+
+.amount {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.5em 1em;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 4px;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #000;
+}
+</style>
+{% endblock %}

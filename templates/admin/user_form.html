@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if user else 'Add' }} User - Company Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="user-form-container">
+    <div class="page-header">
+        <h1>{{ 'Edit' if user else 'Add' }} User</h1>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="user-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        {% if not user %}
+        <div class="form-group">
+            <label for="username">Username *</label>
+            <input type="text" name="username" id="username" class="form-control" 
+                   value="{{ user.username if user else '' }}" required>
+            <small class="form-text text-muted">Username cannot be changed once created.</small>
+        </div>
+        {% endif %}
+
+        <div class="form-group">
+            <label for="name">Full Name *</label>
+            <input type="text" name="name" id="name" class="form-control" 
+                   value="{{ user.name if user else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email Address *</label>
+            <input type="email" name="email" id="email" class="form-control" 
+                   value="{{ user.email if user else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="role">Role *</label>
+            <select name="role" id="role" class="form-control" required>
+                <option value="user" {% if user and user.role == 'user' %}selected{% endif %}>User</option>
+                <option value="accountant" {% if user and user.role == 'accountant' %}selected{% endif %}>Accountant</option>
+                <option value="admin" {% if user and user.role == 'admin' %}selected{% endif %}>Admin</option>
+            </select>
+            <small class="form-text text-muted">
+                - User: Can view transactions and budgets<br>
+                - Accountant: Can manage transactions, budgets, and payroll<br>
+                - Admin: Full access to all features including user management
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label for="password">{{ 'New ' if user else '' }}Password {{ '' if user else '*' }}</label>
+            <div class="input-group">
+                <input type="password" name="password" id="password" class="form-control" 
+                       {{ '' if user else 'required' }}
+                       minlength="8">
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <small class="form-text text-muted">
+                {% if user %}
+                Leave blank to keep current password.<br>
+                {% endif %}
+                Password must be at least 8 characters long.
+            </small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ 'Update' if user else 'Add' }} User</button>
+            <a href="{{ url_for('admin_user_management') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.user-form-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.user-form {
+    margin-top: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-actions {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.input-group-append .btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.fas {
+    width: 1em;
+    text-align: center;
+}
+</style>
+
+<script>
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const icon = document.querySelector('.fas');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}

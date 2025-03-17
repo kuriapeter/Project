@@ -22,6 +22,27 @@
     }
 </style>
 
+
+<h2>Export Financial Reports</h2>
+
+<form action="#" method="post">
+    <label>Select Timeframe:</label>
+    <select id="timeframe">
+        <option value="monthly">Monthly</option>
+        <option value="quarterly">Quarterly</option>
+        <option value="yearly">Yearly</option>
+    </select>
+
+    <h3>Export as:</h3>
+    <button type="button" onclick="exportReport('csv')">Download CSV</button>
+    <button type="button" onclick="exportReport('excel')">Download Excel</button>
+    <button type="button" onclick="exportReport('pdf')">Download PDF</button>
+</form>
+
+
+
+
+
 <h2>Reports</h2>
 <div class="reports-container">
     <p>Coming soon...</p>

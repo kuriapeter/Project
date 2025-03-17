@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ department.name }} - Employees</h2>
+    
+    <!-- Department Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Employees</h5>
+                    <p class="h2">{{ employees|length }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Monthly Payroll</h5>
+                    {% set total_payroll = namespace(value=0) %}
+                    {% for employee_id, payroll in employee_payroll.items() %}
+                        {% if payroll %}
+                            {% set total_payroll.value = total_payroll.value + payroll.salary_amount %}
+                        {% endif %}
+                    {% endfor %}
+                    <p class="h2">${{ "%.2f"|format(total_payroll.value) }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Average Salary</h5>
+                    <p class="h2">${{ "%.2f"|format(total_payroll.value / employees|length if employees else 0) }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee List -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Employee List</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Email</th>
+                            <th>Hire Date</th>
+                            <th>Salary</th>
+                            <th>Last Payment</th>
+                            <th>Next Payment</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee in employees %}
+                        <tr>
+                            <td>{{ employee.name }}</td>
+                            <td>{{ employee.position }}</td>
+                            <td>{{ employee.email }}</td>
+                            <td>{{ employee.hire_date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                {% if employee_payroll[employee.id] %}
+                                    ${{ "%.2f"|format(employee_payroll[employee.id].salary_amount) }}
+                                {% else %}
+                                    Not set
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if employee_payroll[employee.id] and employee_payroll[employee.id].status == 'completed' %}
+                                    {{ employee_payroll[employee.id].pay_date.strftime('%Y-%m-%d') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if employee_payroll[employee.id] and employee_payroll[employee.id].status == 'pending' %}
+                                    {{ employee_payroll[employee.id].pay_date.strftime('%Y-%m-%d') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Distribution Chart -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Employee Salary Distribution</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="salaryDistributionChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Prepare salary data for visualization
+    const salaryData = {
+        labels: [
+            {% for employee in employees %}
+                {% if employee_payroll[employee.id] %}
+                    "{{ employee.name }}",
+                {% endif %}
+            {% endfor %}
+        ],
+        data: [
+            {% for employee in employees %}
+                {% if employee_payroll[employee.id] %}
+                    {{ employee_payroll[employee.id].salary_amount }},
+                {% endif %}
+            {% endfor %}
+        ]
+    };
+
+    // Create salary distribution chart
+    const ctx = document.getElementById('salaryDistributionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: salaryData.labels,
+            datasets: [{
+                label: 'Monthly Salary',
+                data: salaryData.data,
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Salary: $' + context.parsed.y;
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

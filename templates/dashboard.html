@@ -1,265 +1,528 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Finance Tracker{% endblock %}
+{% block title %}Dashboard - Company Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
+{% endblock %}
 
 {% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('auth.dashboard') }}">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </li>
+                    
+                    {% if current_user.role == 'manager' and current_user.managed_department %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.manager_dashboard') }}">
+                            <i class="fas fa-chart-line"></i> Manager Dashboard
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if current_user.department_id %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.department_transactions', dept_id=current_user.department_id) }}">
+                            <i class="fas fa-exchange-alt"></i> Department Transactions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.department_budget', dept_id=current_user.department_id) }}">
+                            <i class="fas fa-wallet"></i> Department Budget
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if current_user.role in ['admin', 'manager', 'hr'] %}
+                    <li class="nav-item">
+                        {% if current_user.role == 'admin' %}
+                        <a class="nav-link" href="{{ url_for('auth.department_list') }}">
+                            <i class="fas fa-users"></i> Departments & Employees
+                        </a>
+                        {% else %}
+                        <a class="nav-link" href="{{ url_for('auth.department_employees', dept_id=current_user.department_id or 0) }}">
+                            <i class="fas fa-users"></i> Department Employees
+                        </a>
+                        {% endif %}
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                {% if current_user.role == 'admin' %}
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>Administration</span>
+                </h6>
+                <ul class="nav flex-column mb-2">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.admin_user_management') }}">
+                            <i class="fas fa-user-cog"></i> User Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.budgets') }}">
+                            <i class="fas fa-money-bill"></i> Budget Management
+                        </a>
+                    </li>
+                </ul>
+                {% endif %}
+            </div>
+        </nav>
 
-<h2>📊 KPI & Performance Indicators</h2>
-<canvas id="kpiChart"></canvas>
+        <!-- Main Content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Dashboard</h1>
+                {% if current_user.department_id %}
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.location.href='{{ url_for('auth.department_transactions', dept_id=current_user.department_id) }}'; return false;">
+                            View Department Transactions
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
 
-<h2>🔔 Alerts & Reminders</h2>
-<ul id="alertsList">Loading alerts...</ul>
+            <!-- Department Info (if applicable) -->
+            {% if current_user.department_id %}
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card dashboard-card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Department Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>Department</h6>
+                                    <p class="h4">{{ current_user.department_info.name }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Role</h6>
+                                    <p class="h4">{{ current_user.role|title }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Manager</h6>
+                                    <p class="h4">
+                                        {% if current_user.department_info.manager %}
+                                            {{ current_user.department_info.manager.name }}
+                                        {% else %}
+                                            Not Assigned
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
+            <!-- Financial Overview -->
+            <div class="row mb-4">
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card dashboard-card">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Total Income</h6>
+                            <h2 class="mb-1 kpi-value">${{ "%.2f"|format(kpis.total_income) }}</h2>
+                            <p class="mb-0">
+                                <span class="text-{{ 'success' if kpis.income_trend >= 0 else 'danger' }}">
+                                    <i class="fas fa-arrow-{{ 'up' if kpis.income_trend >= 0 else 'down' }}"></i>
+                                    {{ "%.1f"|format(kpis.income_trend|abs) }}%
+                                </span>
+                                <span class="text-muted">vs last month</span>
+                                <span class="trend-indicator {{ 'trend-up' if kpis.income_trend >= 0 else 'trend-down' }}">Trend</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card dashboard-card">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Total Expenses</h6>
+                            <h2 class="mb-1 kpi-value">${{ "%.2f"|format(kpis.total_expenses) }}</h2>
+                            <p class="mb-0">
+                                <span class="text-{{ 'danger' if kpis.expense_trend >= 0 else 'success' }}">
+                                    <i class="fas fa-arrow-{{ 'up' if kpis.expense_trend >= 0 else 'down' }}"></i>
+                                    {{ "%.1f"|format(kpis.expense_trend|abs) }}%
+                                </span>
+                                <span class="text-muted">vs last month</span>
+                                <span class="trend-indicator {{ 'trend-up' if kpis.expense_trend >= 0 else 'trend-down' }}">Trend</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card dashboard-card">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Net Profit</h6>
+                            <h2 class="mb-1 kpi-value">${{ "%.2f"|format(kpis.net_balance) }}</h2>
+                            <p class="mb-0">
+                                <span class="text-{{ 'success' if kpis.income_trend >= 0 else 'danger' }}">
+                                    <i class="fas fa-arrow-{{ 'up' if kpis.income_trend >= 0 else 'down' }}"></i>
+                                    {{ "%.1f"|format(kpis.income_trend|abs) }}%
+                                </span>
+                                <span class="text-muted">vs last month</span>
+                                <span class="trend-indicator {{ 'trend-up' if kpis.income_trend >= 0 else 'trend-down' }}">Trend</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card dashboard-card">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Pending Approvals</h6>
+                            <h2 class="mb-1 kpi-value">{{ pending_approvals|length }}</h2>
+                            <p class="mb-0">
+                                <span class="text-{{ 'warning' if pending_approvals else 'success' }}">
+                                    {{ 'Requires attention' if pending_approvals else 'All clear' }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Department Performance (if manager or admin) -->
+            {% if current_user.role in ['admin', 'manager'] %}
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Department Performance</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Department</th>
+                                            <th>Budget</th>
+                                            <th>Expenses</th>
+                                            <th>Utilization</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for dept in departments %}
+                                        {% set utilization = (dept.monthly_expenses / dept.budget_limit * 100) if dept.budget_limit > 0 else 100 %}
+                                        <tr>
+                                            <td>{{ dept.name }}</td>
+                                            <td>${{ "%.2f"|format(dept.budget_limit) }}</td>
+                                            <td>${{ "%.2f"|format(dept.monthly_expenses) }}</td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar {% if utilization > 90 %}bg-danger
+                                                                          {% elif utilization > 70 %}bg-warning
+                                                                          {% else %}bg-success{% endif %}"
+                                                         role="progressbar"
+                                                         style="width: {{ utilization }}%"
+                                                         aria-valuenow="{{ utilization }}"
+                                                         aria-valuemin="0"
+                                                         aria-valuemax="100">
+                                                        {{ "%.1f"|format(utilization) }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge {% if utilization > 90 %}bg-danger
+                                                                  {% elif utilization > 70 %}bg-warning
+                                                                  {% else %}bg-success{% endif %}">
+                                                    {% if utilization > 90 %}Over Budget
+                                                    {% elif utilization > 70 %}Warning
+                                                    {% else %}On Track{% endif %}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
-<style>
-    h1 {
-        color: #333;
-        margin-bottom: 20px;
-    }
+            <!-- Recent Transactions -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Recent Transactions</h5>
+                            {% if current_user.can_manage_transactions() %}
+                            <button type="button" class="btn btn-primary btn-sm" onclick="window.location.href='{{ url_for('auth.add_transaction') }}'; return false;">
+                                Add Transaction
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Type</th>
+                                            <th>Amount</th>
+                                            <th>Category</th>
+                                            <th>Department</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for transaction in recent_transactions %}
+                                        <tr>
+                                            <td>{{ transaction.date.strftime('%Y-%m-%d') }}</td>
+                                            <td>{{ transaction.type|title }}</td>
+                                            <td>${{ "%.2f"|format(transaction.amount) }}</td>
+                                            <td>{{ transaction.category }}</td>
+                                            <td>{{ transaction.department_transactions.name }}</td>
+                                            <td>
+                                                <span class="badge {% if transaction.status == 'approved' %}bg-success
+                                                                  {% elif transaction.status == 'rejected' %}bg-danger
+                                                                  {% else %}bg-warning{% endif %}">
+                                                    {{ transaction.status|title }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <a href="{{ url_for('auth.view_transaction', id=transaction.id) }}" 
+                                                       class="btn btn-sm btn-outline-secondary">
+                                                        View
+                                                    </a>
+                                                    {% if current_user.can_manage_transactions() %}
+                                                    <a href="{{ url_for('auth.edit_transaction', id=transaction.id) }}"
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        Edit
+                                                    </a>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    .dashboard-stats {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-top: 20px;
-        padding: 20px;
-        background: #fff;
-        border-radius: 5px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .stat {
-        font-size: 1.5em;
-        margin: 10px 0;
-        color: #555;
-    }
-
-    .stat-label {
-        font-weight: bold;
-        color: #007bff;
-    }
-
-    .dashboard-kpis {
-        margin-top: 30px;
-        padding: 20px;
-        background: #f9f9f9;
-        border-radius: 5px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        text-align: center;
-    }
-
-    .kpi-box {
-        display: inline-block;
-        margin: 15px;
-        padding: 15px;
-        background: #fff;
-        border-radius: 5px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        text-align: center;
-    }
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        function fetchFinancialData() {
-            fetch('/api/financial_data')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById("totalIncome").innerText = data.total_income;
-                    document.getElementById("totalExpenses").innerText = data.total_expense;
-                    document.getElementById("netProfit").innerText = data.net_profit;
-                })
-                .catch(error => console.error("Error fetching data:", error));
-        }
-    
-        // Refresh data every 5 seconds
-        setInterval(fetchFinancialData, 5000);
-    });
-    </script>
-
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        let kpiChart; // Store the KPI Chart instance
-    
-        function fetchKPIData() {
-            fetch('/api/kpi_data')
-                .then(response => response.json())
-                .then(data => {
-                    updateKPIChart(data);
-                })
-                .catch(error => console.error("Error fetching KPI data:", error));
-        }
-    
-        function fetchAlerts() {
-            fetch('/api/alerts')
-                .then(response => response.json())
-                .then(alerts => {
-                    let alertList = document.getElementById("alertsList");
-                    alertList.innerHTML = alerts.length ? alerts.map(alert => `<li>${alert}</li>`).join("") : "<li>No alerts</li>";
-                })
-                .catch(error => console.error("Error fetching alerts:", error));
-        }
-    
-        function updateKPIChart(data) {
-            if (kpiChart) {
-                kpiChart.data.datasets[0].data = [data.profit_margin, data.expense_ratio, data.cash_flow];
-                kpiChart.update();
-            } else {
-                let ctx = document.getElementById("kpiChart").getContext("2d");
-                kpiChart = new Chart(ctx, {
-                    type: "bar",
-                    data: {
-                        labels: ["Profit Margin (%)", "Expense-to-Income Ratio (%)", "Cash Flow"],
-                        datasets: [{
-                            label: "KPI Metrics",
-                            data: [data.profit_margin, data.expense_ratio, data.cash_flow],
-                            backgroundColor: ["#4CAF50", "#FF5733", "#3498DB"]
-                        }]
-                    }
-                });
-            }
-        }
-    
-        // Fetch data every 5 seconds
-        fetchKPIData();
-        fetchAlerts();
-        setInterval(fetchKPIData, 5000);
-        setInterval(fetchAlerts, 5000);
-    });
-    </script>
-    
-    <div class="payroll-overview">
-        <h3>Payroll Overview</h3>
-        <p><strong>Total Payroll Expenses:</strong> <span id="totalPayroll"></span></p>
-    
-        <h4>Upcoming Payroll</h4>
-        <ul id="upcomingPayroll"></ul>
-    
-        <h4>Discrepancies</h4>
-        <ul id="payrollDiscrepancies"></ul>
+            <!-- Payroll Overview (if HR or admin) -->
+            {% if current_user.can_view_payroll() %}
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Upcoming Payroll</h5>
+                            {% if current_user.can_edit_payroll() %}
+                            <button type="button" class="btn btn-primary btn-sm" onclick="window.location.href='{{ url_for('main.add_payroll') }}'; return false;">
+                                Add Payroll
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Employee</th>
+                                            <th>Department</th>
+                                            <th>Amount</th>
+                                            <th>Pay Date</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for payroll in upcoming_payroll %}
+                                        <tr>
+                                            <td>{{ payroll.employee_payroll.name }}</td>
+                                            <td>{{ payroll.employee_payroll.department_info.name }}</td>
+                                            <td>${{ "%.2f"|format(payroll.salary_amount) }}</td>
+                                            <td>{{ payroll.pay_date.strftime('%Y-%m-%d') }}</td>
+                                            <td>
+                                                <span class="badge {% if payroll.status == 'completed' %}bg-success
+                                                                  {% elif payroll.status == 'pending' %}bg-warning
+                                                                  {% else %}bg-secondary{% endif %}">
+                                                    {{ payroll.status|title }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if current_user.can_edit_payroll() %}
+                                                <a href="{{ url_for('auth.edit_payroll', id=payroll.id) }}"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    Edit
+                                                </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </main>
     </div>
-    
-    <script>
-        async function loadPayrollData() {
-            const totalPayrollRes = await fetch('/payroll/total');
-            const totalPayroll = await totalPayrollRes.json();
-            document.getElementById('totalPayroll').innerText = `$${totalPayroll.total_payroll}`;
-    
-            const upcomingPayrollRes = await fetch('/payroll/upcoming');
-            const upcomingPayroll = await upcomingPayrollRes.json();
-            document.getElementById('upcomingPayroll').innerHTML = upcomingPayroll.upcoming_payroll.map(p => 
-                `<li>Employee ${p.employee_id}: $${p.salary_amount} on ${p.pay_date}</li>`
-            ).join('');
-    
-            const discrepanciesRes = await fetch('/payroll/discrepancies');
-            const discrepancies = await discrepanciesRes.json();
-            document.getElementById('payrollDiscrepancies').innerHTML = discrepancies.discrepancies.length > 0 
-                ? discrepancies.discrepancies.map(d => `<li>Employee ${d.id} (${d.name}) has missing payments</li>`).join('')
-                : '<li>No discrepancies detected.</li>';
-        }
-    
-        loadPayrollData();
-    </script>
-    
+</div>
+{% endblock %}
 
-
-
-
-
-    <h2>Welcome to Your Finance Dashboard</h2>
-
-    <p>Total Income: <span id="totalIncome">Loading...</span></p>
-    <p>Total Expenses: <span id="totalExpenses">Loading...</span></p>
-    <p>Net Profit: <span id="netProfit">Loading...</span></p>
-    
-
+{% block scripts %}
 <script>
-    fetch('/api/kpi_data')
-        .then(response => response.json())
-        .then(data => {
-            console.log("KPI Data:", data); // Debugging
-    
-            if (!data.yearly_performance || data.yearly_performance.length === 0) {
-                console.warn("No chart data available.");
+document.addEventListener('DOMContentLoaded', function() {
+    const API_ENDPOINTS = {
+        dashboardData: "{{ url_for('auth.get_dashboard_data') }}"
+    };
+
+    // Function to update dashboard data
+    async function updateDashboard() {
+        try {
+            const timeRange = document.getElementById('timeRange').value;
+            const response = await fetch(`${API_ENDPOINTS.dashboardData}?timeRange=${timeRange}`);
+            const data = await response.json();
+
+            if (!data) {
+                console.error('No data received from server');
                 return;
             }
-    
-            const ctx = document.getElementById('yearlyChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.yearly_performance.map(item => item.month),
-                    datasets: [
-                        {
-                            label: 'Total Income',
-                            data: data.yearly_performance.map(item => item.total_income),
-                            backgroundColor: 'green'
-                        },
-                        {
-                            label: 'Total Expenses',
-                            data: data.yearly_performance.map(item => item.total_expenses),
-                            backgroundColor: 'red'
-                        }
-                    ]
-                }
-            });
-        })
-        .catch(error => console.error('Error fetching KPI data:', error));
-    </script>
-    
-<div class="dashboard-alerts">
-    <h3>🔔 Alerts & Reminders</h3>
-    <ul id="alerts-list">
-        <li>Loading alerts...</li>
-    </ul>
-</div>
 
+            // Update KPI values
+            document.getElementById('total-revenue').textContent = `$${data.total_income.toLocaleString()}`;
+            document.getElementById('total-expenses').textContent = `$${data.total_expenses.toLocaleString()}`;
+            document.getElementById('net-profit').textContent = `$${(data.total_income - data.total_expenses).toLocaleString()}`;
+
+            // Update charts
+            updateCharts(data);
+
+            // Update budget overview if data exists
+            if (data.budgets) {
+                updateBudgetOverview(data.budgets);
+            }
+        } catch (error) {
+            console.error('Error updating dashboard:', error);
+        }
+    }
+
+    // Function to update charts
+    function updateCharts(data) {
+        if (!data.income || !data.expenses) {
+            console.error('Missing income or expenses data');
+            return;
+        }
+
+        // Process data for revenue vs expenses chart
+        const dates = [...new Set([...data.income.map(i => i.date), ...data.expenses.map(e => e.date)])].sort();
+        const incomeByDate = {};
+        const expensesByDate = {};
+
+        data.income.forEach(i => { incomeByDate[i.date] = i.amount; });
+        data.expenses.forEach(e => { expensesByDate[e.date] = e.amount; });
+
+        const revenueData = dates.map(date => incomeByDate[date] || 0);
+        const expensesData = dates.map(date => expensesByDate[date] || 0);
+
+        // Update revenue vs expenses chart
+        if (window.revenueExpensesChart) {
+            revenueExpensesChart.data.labels = dates;
+            revenueExpensesChart.data.datasets[0].data = revenueData;
+            revenueExpensesChart.data.datasets[1].data = expensesData;
+            revenueExpensesChart.update();
+        }
+
+        // Update cash flow chart
+        const cashFlow = dates.map((date, i) => {
+            const totalIncome = revenueData.slice(0, i + 1).reduce((a, b) => a + b, 0);
+            const totalExpenses = expensesData.slice(0, i + 1).reduce((a, b) => a + b, 0);
+            return totalIncome - totalExpenses;
+        });
+
+        if (window.cashFlowChart) {
+            cashFlowChart.data.labels = dates;
+            cashFlowChart.data.datasets[0].data = cashFlow;
+            cashFlowChart.update();
+        }
+    }
+
+    // Function to update budget overview
+    function updateBudgetOverview(budgets) {
+        const budgetGrid = document.getElementById('budget-overview');
+        if (!budgetGrid) {
+            console.error('Budget overview element not found');
+            return;
+        }
+
+        budgetGrid.innerHTML = budgets.map(budget => {
+            const utilization = (budget.spent_amount / budget.budget_amount * 100);
+            return `
+                <div class="budget-card">
+                    <h4>${budget.category}</h4>
+                    <div class="budget-progress">
+                        <div class="progress-bar ${utilization > 90 ? 'bg-danger' : utilization > 70 ? 'bg-warning' : 'bg-success'}" 
+                             style="width: ${utilization}%"></div>
+                    </div>
+                    <div class="budget-details">
+                        <span>Budget: $${budget.budget_amount.toLocaleString()}</span>
+                        <span>Spent: $${budget.spent_amount.toLocaleString()}</span>
+                        <span>Remaining: $${(budget.budget_amount - budget.spent_amount).toLocaleString()}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Initial update
+    updateDashboard();
+
+    // Set up periodic updates
+    setInterval(updateDashboard, 300000); // Update every 5 minutes
+});
+</script>
 <style>
-    .dashboard-alerts {
-        margin-top: 30px;
-        padding: 20px;
-        background: #ffeeba;
-        border-left: 5px solid #ff9800;
-        border-radius: 5px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
     }
-    .dashboard-alerts ul {
-        list-style-type: none;
-        padding: 0;
+
+    .dashboard-card {
+        margin-bottom: 1.5rem;
+        border-radius: 0.25rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     }
-    .dashboard-alerts li {
-        padding: 8px;
-        border-bottom: 1px solid #ddd;
-        font-size: 1em;
+
+    .dashboard-card .card-body {
+        padding: 1.25rem;
+    }
+
+    .kpi-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .trend-indicator {
+        font-size: 0.875rem;
+        margin-left: 0.5rem;
+    }
+
+    .trend-up {
+        color: #28a745;
+    }
+
+    .trend-down {
+        color: #dc3545;
     }
 </style>
-<script>
-    fetch('/api/alerts')
-        .then(response => response.json())
-        .then(data => {
-            const alertsList = document.getElementById("alerts-list");
-            alertsList.innerHTML = "";
-    
-            if (data.length === 0) {
-                alertsList.innerHTML = "<li>✅ No alerts at the moment.</li>";
-            } else {
-                data.forEach(alert => {
-                    let alertItem = document.createElement("li");
-                    alertItem.textContent = alert.message;
-                    alertsList.appendChild(alertItem);
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching alerts:', error);
-        });
-    </script>
-    
-
-
 {% endblock %}
